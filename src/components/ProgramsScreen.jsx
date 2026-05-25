@@ -1,8 +1,11 @@
+import { useState } from 'react'
 import { PROGRAMS } from '../data/programs.js'
 import { EXERCISES } from '../data/exercises.js'
+import WorkoutPreviewModal from './WorkoutPreviewModal.jsx'
 
 export default function ProgramsScreen({ onStartWorkout }) {
   const program = PROGRAMS['lv-ppl']
+  const [previewDay, setPreviewDay] = useState(null)
 
   return (
     <div className="screen animate-in">
@@ -26,9 +29,22 @@ export default function ProgramsScreen({ onStartWorkout }) {
 
       <div style={{ marginTop: 24, display: 'flex', flexDirection: 'column', gap: 14 }}>
         {program.days.map(day => (
-          <DayCard key={day.id} day={day} onStart={() => onStartWorkout(day)} />
+          <DayCard
+            key={day.id}
+            day={day}
+            onPreview={() => setPreviewDay(day)}
+            onStart={() => onStartWorkout(day)}
+          />
         ))}
       </div>
+
+      {previewDay && (
+        <WorkoutPreviewModal
+          day={previewDay}
+          onClose={() => setPreviewDay(null)}
+          onStart={(day) => { setPreviewDay(null); onStartWorkout(day) }}
+        />
+      )}
 
       <div className="card mt-16" style={{ opacity: .6 }}>
         <p className="label mb-8">Estrutura semanal</p>
@@ -59,65 +75,43 @@ export default function ProgramsScreen({ onStartWorkout }) {
   )
 }
 
-function DayCard({ day, onStart }) {
-  const [open, setOpen] = useState(false)
+function DayCard({ day, onPreview, onStart }) {
   const totalSets = day.exercises.reduce((a, e) => a + e.sets, 0)
 
   return (
     <div className="card">
-      <div
-        className="row-between"
-        onClick={() => setOpen(o => !o)}
-        style={{ cursor: 'pointer' }}
-      >
+      <div className="row-between" style={{ marginBottom: 12 }}>
         <div>
           <span className={`tag tag-${day.category}`}>{day.name}</span>
           <p className="h3" style={{ marginTop: 6 }}>{day.subtitle}</p>
           <p className="caption mt-8">{day.exercises.length} exercícios · {totalSets} sets totais</p>
         </div>
-        <span style={{ fontSize: 18, color: 'var(--text-3)', transition: 'transform .2s', transform: open ? 'rotate(180deg)' : 'none' }}>
-          ▾
-        </span>
-      </div>
-
-      {open && (
-        <div style={{ marginTop: 14 }}>
-          <div className="sep" />
-          {day.exercises.map(({ exerciseId, sets, repRange }) => {
+        <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
+          {day.exercises.map(({ exerciseId }) => {
             const ex = EXERCISES[exerciseId]
             return (
-              <div key={exerciseId} style={{ padding: '10px 0', borderBottom: '1px solid var(--border)' }}>
-                <div className="row-between">
-                  <div className="row gap-10">
-                    <span style={{ fontSize: 18 }}>{ex.emoji}</span>
-                    <div>
-                      <p style={{ fontSize: 14, fontWeight: 600 }}>{ex.name}</p>
-                      <p className="caption">{ex.muscles.join(' · ')}</p>
-                    </div>
-                  </div>
-                  <div style={{ textAlign: 'right' }}>
-                    <p style={{ fontSize: 13, fontWeight: 700 }}>
-                      {sets}×{repRange[0]}–{repRange[1]}
-                    </p>
-                    <p className="caption">
-                      {Math.round(ex.rest.recommended / 60)}min descanso
-                    </p>
-                  </div>
-                </div>
-              </div>
+              <span key={exerciseId} style={{ fontSize: 18 }} title={ex?.name}>{ex?.emoji}</span>
             )
           })}
-
-          <button
-            className="btn btn-primary w-full mt-14"
-            onClick={e => { e.stopPropagation(); onStart() }}
-          >
-            🔥 Iniciar {day.name} Day
-          </button>
         </div>
-      )}
+      </div>
+
+      <div className="row gap-8">
+        <button
+          className="btn btn-ghost w-full"
+          style={{ fontSize: 13 }}
+          onClick={onPreview}
+        >
+          👁 Ver treino
+        </button>
+        <button
+          className="btn btn-primary w-full"
+          style={{ fontSize: 13 }}
+          onClick={onStart}
+        >
+          🔥 Iniciar
+        </button>
+      </div>
     </div>
   )
 }
-
-import { useState } from 'react'

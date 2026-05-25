@@ -1,5 +1,7 @@
+import { useState } from 'react'
 import { PROGRAMS, getTodaySchedule } from '../data/programs.js'
 import { EXERCISES } from '../data/exercises.js'
+import WorkoutPreviewModal from './WorkoutPreviewModal.jsx'
 
 function getGreeting() {
   const h = new Date().getHours()
@@ -11,6 +13,7 @@ function getGreeting() {
 const DOW_LABELS = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb']
 
 export default function HomeScreen({ history, activeWorkout, onStartWorkout, setScreen, driveSync }) {
+  const [previewDay, setPreviewDay] = useState(null)
   const today = getTodaySchedule('lv-ppl', history)
   const isRestDay = !today
   const dow = new Date().getDay()
@@ -151,12 +154,20 @@ export default function HomeScreen({ history, activeWorkout, onStartWorkout, set
             </p>
           )}
 
-          <button
-            className="btn btn-primary w-full mt-16"
-            onClick={() => onStartWorkout(today)}
-          >
-            🔥 Iniciar {today.name} Day
-          </button>
+          <div className="row gap-8 mt-16">
+            <button
+              className="btn btn-ghost w-full"
+              onClick={() => setPreviewDay(today)}
+            >
+              👁 Ver treino
+            </button>
+            <button
+              className="btn btn-primary w-full"
+              onClick={() => onStartWorkout(today)}
+            >
+              🔥 Iniciar
+            </button>
+          </div>
         </div>
       )}
 
@@ -193,5 +204,13 @@ export default function HomeScreen({ history, activeWorkout, onStartWorkout, set
         </>
       )}
     </div>
+
+    {previewDay && (
+      <WorkoutPreviewModal
+        day={previewDay}
+        onClose={() => setPreviewDay(null)}
+        onStart={(day) => { setPreviewDay(null); onStartWorkout(day) }}
+      />
+    )}
   )
 }
