@@ -7,7 +7,12 @@ import {
 
 const STATUS = { idle: 'idle', auth: 'auth', saving: 'saving', loading: 'loading', done: 'done', error: 'error' }
 
-export default function DriveSync({ data, onLoad }) {
+function formatTime(ts) {
+  if (!ts) return ''
+  return new Date(ts).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
+}
+
+export default function DriveSync({ data, onLoad, autoSync, onManualSync }) {
   const [open, setOpen] = useState(false)
   const [clientId, setClientId] = useState(getStoredClientId)
   const [draftId, setDraftId] = useState(getStoredClientId)
@@ -85,14 +90,37 @@ export default function DriveSync({ data, onLoad }) {
 
   const busy = status === STATUS.saving || status === STATUS.loading || status === STATUS.auth
 
-  const syncIcon = {
-    idle: '☁️',
-    auth: '🔑',
-    saving: '⏳',
-    loading: '⏳',
-    done: '✅',
-    error: '⚠️',
-  }[status]
+  // Merge auto-sync status into chip display
+  const isAutoSyncing = autoSync?.state === 'syncing'
+  const autoSynced    = autoSync?.state === 'done'
+  const autoError     = autoSync?.state === 'error'
+
+  const chipIcon = isAutoSyncing ? '⏳'
+    : autoSynced  ? '✅'
+    : autoError   ? '⚠️'
+    : authed      ? '☁️'
+    : '☁️'
+
+  const chipLabel = isAutoSyncing ? 'Salvando…'
+    : autoSynced  ? `Salvo ${formatTime(autoSync.time)}`
+    : autoError   ? 'Erro ao salvar'
+    : authed      ? 'Drive'
+    : 'Conectar Drive'
+
+  const chipColor = isAutoSyncing || autoSynced ? 'var(--green)'
+    : autoError   ? 'var(--red)'
+    : authed      ? 'var(--green)'
+    : 'var(--text-2)'
+
+  const chipBg = isAutoSyncing || autoSynced ? 'rgba(6,214,160,.12)'
+    : autoError   ? 'rgba(255,59,59,.12)'
+    : authed      ? 'rgba(6,214,160,.12)'
+    : 'var(--surface-2)'
+
+  const chipBorder = isAutoSyncing || autoSynced ? 'rgba(6,214,160,.3)'
+    : autoError   ? 'rgba(255,59,59,.3)'
+    : authed      ? 'rgba(6,214,160,.3)'
+    : 'var(--border)'
 
   return (
     <>
@@ -101,15 +129,16 @@ export default function DriveSync({ data, onLoad }) {
         onClick={() => setOpen(true)}
         style={{
           display: 'flex', alignItems: 'center', gap: 6,
-          background: authed ? 'rgba(6,214,160,.12)' : 'var(--surface-2)',
-          border: `1px solid ${authed ? 'rgba(6,214,160,.3)' : 'var(--border)'}`,
+          background: chipBg,
+          border: `1px solid ${chipBorder}`,
           borderRadius: 999, padding: '5px 12px',
-          color: authed ? 'var(--green)' : 'var(--text-2)',
+          color: chipColor,
           fontSize: 12, fontWeight: 600, fontFamily: 'inherit',
           cursor: 'pointer',
+          transition: 'all .3s ease',
         }}
       >
-        {syncIcon} {authed ? 'Drive' : 'Conectar Drive'}
+        {chipIcon} {chipLabel}
       </button>
 
       {/* Modal */}
@@ -187,6 +216,18 @@ export default function DriveSync({ data, onLoad }) {
                       {status === STATUS.loading ? '⏳ Carregando...' : '⬇️ Restaurar do Drive'}
                     </button>
                   </>
+                )}
+
+                {autoSynced && autoSync?.time && (
+                  <div style={{
+                    padding: '8px 14px', borderRadius: 'var(--r-md)',
+                    background: 'rgba(6,214,160,.08)',
+                    border: '1px solid rgba(6,214,160,.2)',
+                    color: 'var(--green)', fontSize: 12,
+                    display: 'flex', alignItems: 'center', gap: 8,
+                  }}>
+                    ✅ Auto-salvo às {formatTime(autoSync.time)}
+                  </div>
                 )}
 
                 {msg && (

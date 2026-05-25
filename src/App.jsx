@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import Navigation from './components/Navigation.jsx'
 import HomeScreen from './components/HomeScreen.jsx'
 import WorkoutScreen from './components/WorkoutScreen.jsx'
@@ -7,6 +7,7 @@ import ProgramsScreen from './components/ProgramsScreen.jsx'
 import DriveSync from './components/DriveSync.jsx'
 import GenderSelectScreen from './components/GenderSelectScreen.jsx'
 import { EXERCISES } from './data/exercises.js'
+import { saveToDrive, getToken } from './services/googleDrive.js'
 
 const STORAGE_KEY = 'forge_data_v1'
 
@@ -30,9 +31,10 @@ export default function App() {
   const [screen, setScreen] = useState('home')
   const [history, setHistory] = useState([])
   const [activeWorkout, setActiveWorkout] = useState(null)
-  const [gender, setGender] = useState(null) // null = not yet selected
+  const [gender, setGender] = useState(null)
+  const [driveSync, setDriveSync] = useState({ state: 'idle', time: null })
+  // 'idle' | 'syncing' | 'done' | 'error'
 
-  // Load persisted data
   useEffect(() => {
     const data = loadData()
     setHistory(data.history ?? [])
@@ -41,15 +43,26 @@ export default function App() {
     if (data.activeWorkout) setScreen('workout')
   }, [])
 
-  // Persist whenever state changes
   useEffect(() => {
-    if (gender === null) return // don't persist before selection
+    if (gender === null) return
     saveData({ history, activeWorkout, gender })
   }, [history, activeWorkout, gender])
 
-  // Program ID derived from gender
   const programId = gender === 'female' ? 'lv-ppl-female' : 'lv-ppl'
 
+  /* ── Auto-sync to Drive ──────────────────────────────── */
+  const autoSync = useCallback(async (data) => {
+    if (!getToken()) return   // not authenticated — skip silently
+    setDriveSync({ state: 'syncing', time: null })
+    try {
+      await saveToDrive(data)
+      setDriveSync({ state: 'done', time: Date.now() })
+    } catch {
+      setDriveSync({ state: 'error', time: null })
+    }
+  }, [])
+
+  /* ── Actions ─────────────────────────────────────────── */
   function handleGenderSelect(g) {
     setGender(g)
     saveData({ history, activeWorkout, gender: g })
@@ -58,35 +71,22 @@ export default function App() {
   function startWorkout(day) {
     if (!day) {
       day = {
-        id: 'custom',
-        name: 'Custom',
-        category: 'push',
+        id: 'custom', name: 'Custom', category: 'push',
         exercises: Object.values(EXERCISES).slice(0, 4).map(ex => ({
-          exerciseId: ex.id,
-          sets: ex.defaultSets,
-          repRange: ex.repRange,
+          exerciseId: ex.id, sets: ex.defaultSets, repRange: ex.repRange,
         })),
       }
     }
-
     const workout = {
-      programId,
-      dayId: day.id,
-      dayName: day.name,
-      category: day.category,
-      startTime: Date.now(),
+      programId, dayId: day.id, dayName: day.name,
+      category: day.category, startTime: Date.now(),
       exercises: day.exercises.map(({ exerciseId, sets, repRange }) => ({
-        exerciseId,
-        plannedSets: sets,
-        repRange,
+        exerciseId, plannedSets: sets, repRange,
         sets: Array.from({ length: sets }, () => ({
-          weight: 0,
-          reps: repRange[0],
-          completed: false,
+          weight: 0, reps: repRange[0], completed: false,
         })),
       })),
     }
-
     setActiveWorkout(workout)
     setScreen('workout')
   }
@@ -98,13 +98,17 @@ export default function App() {
   function finishWorkout() {
     if (!activeWorkout) return
     const finished = { ...activeWorkout, endTime: Date.now() }
-    setHistory(h => [...h, finished])
+    const newHistory = [...history, finished]
+    setHistory(newHistory)
     setActiveWorkout(null)
     setScreen('history')
+    autoSync({ history: newHistory, activeWorkout: null, gender })
   }
 
   function deleteWorkout(startTime) {
-    setHistory(h => h.filter(w => w.startTime !== startTime))
+    const newHistory = history.filter(w => w.startTime !== startTime)
+    setHistory(newHistory)
+    autoSync({ history: newHistory, activeWorkout, gender })
   }
 
   function handleDriveLoad(loaded) {
@@ -113,7 +117,6 @@ export default function App() {
     if (loaded.gender) setGender(loaded.gender)
   }
 
-  // Show gender select on first launch
   if (gender === null) {
     return <GenderSelectScreen onSelect={handleGenderSelect} />
   }
@@ -130,7 +133,14 @@ export default function App() {
             programId={programId}
             onStartWorkout={startWorkout}
             setScreen={setScreen}
-            driveSync={<DriveSync data={driveData} onLoad={handleDriveLoad} />}
+            driveSync={
+              <DriveSync
+                data={driveData}
+                onLoad={handleDriveLoad}
+                autoSync={driveSync}
+                onManualSync={() => setDriveSync({ state: 'idle', time: null })}
+              />
+            }
           />
         )
       case 'workout':
@@ -161,11 +171,7 @@ export default function App() {
   return (
     <>
       {renderScreen()}
-      <Navigation
-        screen={screen}
-        setScreen={setScreen}
-        hasActiveWorkout={!!activeWorkout}
-      />
+      <Navigation screen={screen} setScreen={setScreen} hasActiveWorkout={!!activeWorkout} />
     </>
   )
 }
