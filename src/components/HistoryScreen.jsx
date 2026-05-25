@@ -12,7 +12,7 @@ function formatDuration(ms) {
   return `${m}min`
 }
 
-export default function HistoryScreen({ history }) {
+export default function HistoryScreen({ history, onDelete }) {
   if (history.length === 0) {
     return (
       <div className="screen" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: '60vh', gap: 16 }}>
@@ -113,18 +113,33 @@ export default function HistoryScreen({ history }) {
         const dur = w.endTime - w.startTime
 
         return (
-          <WorkoutEntry key={i} workout={w} volume={vol} sets={sets} duration={dur} prs={prs} history={history.slice(0, history.length - i - 1)} />
+          <WorkoutEntry key={w.startTime} workout={w} volume={vol} sets={sets} duration={dur} prs={prs} history={history.slice(0, history.length - i - 1)} onDelete={onDelete} />
         )
       })}
     </div>
   )
 }
 
-function WorkoutEntry({ workout, volume, sets, duration, prs }) {
+function WorkoutEntry({ workout, volume, sets, duration, prs, onDelete }) {
   const [expanded, setExpanded] = useState(false)
+  const [confirming, setConfirming] = useState(false)
+
+  function handleDelete(e) {
+    e.stopPropagation()
+    if (confirming) {
+      onDelete(workout.startTime)
+    } else {
+      setConfirming(true)
+    }
+  }
+
+  function cancelDelete(e) {
+    e.stopPropagation()
+    setConfirming(false)
+  }
 
   return (
-    <div className="history-card" onClick={() => setExpanded(e => !e)}>
+    <div className="history-card" onClick={() => { setExpanded(e => !e); setConfirming(false) }}>
       <div className="history-header">
         <div>
           <span className={`tag tag-${workout.category}`}>{workout.dayName}</span>
@@ -176,9 +191,31 @@ function WorkoutEntry({ workout, volume, sets, duration, prs }) {
         </div>
       )}
 
-      <p className="caption" style={{ marginTop: 8, opacity: .4, fontSize: 11 }}>
-        {expanded ? '▲ fechar' : '▼ detalhes'}
-      </p>
+      <div style={{ marginTop: 10, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <p className="caption" style={{ opacity: .4, fontSize: 11 }}>
+          {expanded ? '▲ fechar' : '▼ detalhes'}
+        </p>
+        {expanded && (
+          confirming ? (
+            <div className="row gap-8" onClick={e => e.stopPropagation()}>
+              <span className="caption" style={{ fontSize: 11 }}>Confirmar?</span>
+              <button
+                onClick={handleDelete}
+                style={{ fontSize: 11, padding: '3px 10px', borderRadius: 6, border: 'none', background: '#cc2222', color: '#fff', cursor: 'pointer', fontWeight: 700 }}
+              >Excluir</button>
+              <button
+                onClick={cancelDelete}
+                style={{ fontSize: 11, padding: '3px 10px', borderRadius: 6, border: '1px solid var(--border)', background: 'transparent', color: 'var(--text-2)', cursor: 'pointer' }}
+              >Cancelar</button>
+            </div>
+          ) : (
+            <button
+              onClick={handleDelete}
+              style={{ fontSize: 11, padding: '3px 10px', borderRadius: 6, border: '1px solid #cc222244', background: 'transparent', color: '#cc4444', cursor: 'pointer' }}
+            >🗑 Excluir</button>
+          )
+        )}
+      </div>
     </div>
   )
 }

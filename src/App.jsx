@@ -92,6 +92,10 @@ export default function App() {
     setScreen('history')
   }
 
+  function deleteWorkout(startTime) {
+    setHistory(h => h.filter(w => w.startTime !== startTime))
+  }
+
   function handleDriveLoad(loaded) {
     if (loaded.history) setHistory(loaded.history)
     if (loaded.activeWorkout !== undefined) setActiveWorkout(loaded.activeWorkout)
@@ -121,7 +125,7 @@ export default function App() {
           />
         )
       case 'history':
-        return <HistoryScreen history={history} />
+        return <HistoryScreen history={history} onDelete={deleteWorkout} />
       case 'programs':
         return <ProgramsScreen onStartWorkout={startWorkout} />
       default:
