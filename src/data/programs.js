@@ -15,6 +15,7 @@ export const PROGRAMS = {
           { exerciseId: 'overhead-press',sets: 3, repRange: [5, 8]  },
           { exerciseId: 'incline-press', sets: 2, repRange: [6, 10] },
           { exerciseId: 'lateral-raise', sets: 3, repRange: [12, 20]},
+          { exerciseId: 'dumbbell-fly',  sets: 3, repRange: [10, 15]},
         ],
       },
       {
@@ -24,7 +25,8 @@ export const PROGRAMS = {
         category: 'pull',
         exercises: [
           { exerciseId: 'pullup',       sets: 3, repRange: [4, 8]  },
-          { exerciseId: 'barbell-row',  sets: 3, repRange: [5, 8]  },
+          { exerciseId: 'barbell-row',   sets: 3, repRange: [5, 8]  },
+          { exerciseId: 'lat-pulldown', sets: 3, repRange: [8, 12] },
           { exerciseId: 'face-pull',    sets: 3, repRange: [15, 20]},
           { exerciseId: 'bicep-curl',   sets: 3, repRange: [10, 15]},
         ],
@@ -37,6 +39,7 @@ export const PROGRAMS = {
         exercises: [
           { exerciseId: 'squat',              sets: 3, repRange: [4, 6]  },
           { exerciseId: 'romanian-deadlift',  sets: 3, repRange: [6, 10] },
+          { exerciseId: 'leg-curl',           sets: 3, repRange: [10, 15]},
           { exerciseId: 'leg-press',          sets: 3, repRange: [8, 12] },
           { exerciseId: 'calf-raise',         sets: 4, repRange: [15, 25]},
         ],

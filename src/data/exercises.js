@@ -53,6 +53,20 @@ export const EXERCISES = {
     emoji: '✈️',
   },
 
+  'dumbbell-fly': {
+    id: 'dumbbell-fly',
+    name: 'Fly de Halter',
+    nameEn: 'Dumbbell Fly',
+    category: 'push',
+    type: 'isolation',
+    muscles: ['Peitoral', 'Deltóide Anterior'],
+    defaultSets: 3,
+    repRange: [10, 15],
+    rest: { recommended: 90, min: 60, max: 120 },
+    cues: ['Leve flexão nos cotovelos', 'Abre até sentir o alongamento', 'Contrai o peitoral no topo'],
+    emoji: '🦅',
+  },
+
   /* ── PULL ────────────────────────────────────────────── */
   'pullup': {
     id: 'pullup',
@@ -107,6 +121,20 @@ export const EXERCISES = {
     emoji: '💪',
   },
 
+  'lat-pulldown': {
+    id: 'lat-pulldown',
+    name: 'Puxada Frontal',
+    nameEn: 'Lat Pulldown',
+    category: 'pull',
+    type: 'compound',
+    muscles: ['Latíssimo', 'Bíceps', 'Rombóide'],
+    defaultSets: 3,
+    repRange: [8, 12],
+    rest: { recommended: 150, min: 90, max: 210 },
+    cues: ['Deprime as escápulas', 'Puxa até o queixo', 'Cotovelos apontam para o chão'],
+    emoji: '🔽',
+  },
+
   /* ── LEGS ────────────────────────────────────────────── */
   'squat': {
     id: 'squat',
@@ -133,6 +161,19 @@ export const EXERCISES = {
     rest: { recommended: 180, min: 120, max: 240 },
     cues: ['Quadril para trás', 'Barra próxima ao corpo', 'Sente o alongamento'],
     emoji: '📐',
+  },
+  'leg-curl': {
+    id: 'leg-curl',
+    name: 'Mesa Flexora',
+    nameEn: 'Leg Curl',
+    category: 'legs',
+    type: 'isolation',
+    muscles: ['Isquiotibiais', 'Gastrocnêmio'],
+    defaultSets: 3,
+    repRange: [10, 15],
+    rest: { recommended: 90, min: 60, max: 120 },
+    cues: ['Quadril fixo no banco', 'Contrai no final do movimento', 'Descida controlada 3s'],
+    emoji: '🦵',
   },
   'leg-press': {
     id: 'leg-press',

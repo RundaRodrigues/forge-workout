@@ -498,6 +498,88 @@ const CONFIGS = {
     },
   },
 
+  'dumbbell-fly': {
+    light: 0xff3b3b, bg: '#0d080f', shirt: 0x991122,
+    cam: { pos: [2.5, 1.0, 1.6], look: [0.1, 0, 0] },
+    setup(fig, scene) {
+      fig.root.rotation.z = -PI / 2
+      fig.root.position.set(0, -0.1, 0)
+      const bench = makeBench()
+      bench.position.set(0, -0.52, 0)
+      bench.rotation.z = PI / 2
+      scene.add(bench)
+      const dL = makeDumbbell(-1)
+      const dR = makeDumbbell(1)
+      scene.add(dL); scene.add(dR)
+      fig._dL = dL; fig._dR = dR
+    },
+    animate(fig, t) {
+      const p = pulse(t, 0.55)
+      // arms sweep wide (fly arc)
+      fig.lShoulder.rotation.x = -(0.1 + p * 0.6)
+      fig.rShoulder.rotation.x = -(0.1 + p * 0.6)
+      fig.lShoulder.rotation.z = 0.2 + (1 - p) * 1.1
+      fig.rShoulder.rotation.z = -(0.2 + (1 - p) * 1.1)
+      fig.lElbow.rotation.x = 0.2
+      fig.rElbow.rotation.x = 0.2
+      if (fig._dL) {
+        fig.root.updateWorldMatrix(true, true)
+        const lPos = new THREE.Vector3()
+        const rPos = new THREE.Vector3()
+        fig.lHand.getWorldPosition(lPos)
+        fig.rHand.getWorldPosition(rPos)
+        fig._dL.position.copy(lPos)
+        fig._dR.position.copy(rPos)
+      }
+    },
+  },
+
+  'lat-pulldown': {
+    light: 0x4cc9f0, bg: '#07090f', shirt: 0x0a2a6e,
+    cam: { pos: [2.2, 0.5, 2.4], look: [0, 0.3, 0] },
+    setup(fig, scene) {
+      fig.root.position.set(0, -0.62, 0)
+      // overhead bar
+      const bar = makePullBar()
+      bar.position.y = 1.55
+      scene.add(bar)
+      fig._bar = bar
+    },
+    animate(fig, t) {
+      const p = pulse(t, 0.55)
+      const armAngle = -(0.3 + p * 1.1)
+      fig.lShoulder.rotation.x = armAngle
+      fig.rShoulder.rotation.x = armAngle
+      fig.lShoulder.rotation.z = -0.25
+      fig.rShoulder.rotation.z = 0.25
+      fig.lElbow.rotation.x = -(0.2 + p * 0.8)
+      fig.rElbow.rotation.x = -(0.2 + p * 0.8)
+      // slight torso lean back at peak contraction
+      fig.spine.rotation.x = -(p * 0.15)
+    },
+  },
+
+  'leg-curl': {
+    light: 0x06d6a0, bg: '#070f0c', shirt: 0x0a4a30,
+    cam: { pos: [2.5, 0.3, 2.0], look: [0, -0.1, 0] },
+    setup(fig, scene) {
+      // prone (face-down) position
+      fig.root.rotation.z = PI / 2
+      fig.root.position.set(0, -0.05, 0)
+      const bench = makeBench()
+      bench.position.set(0, -0.52, 0)
+      bench.rotation.z = PI / 2
+      scene.add(bench)
+    },
+    animate(fig, t) {
+      const p = pulse(t, 0.6)
+      fig.lKnee.rotation.x = -(p * 1.7)
+      fig.rKnee.rotation.x = -(p * 1.7)
+      fig.lHip.rotation.x = p * 0.1
+      fig.rHip.rotation.x = p * 0.1
+    },
+  },
+
   'default': {
     light: 0xff7a1a, bg: '#0a0a12', shirt: 0x222266,
     cam: { pos: [0, 0.3, 3.4], look: [0, 0.2, 0] },
