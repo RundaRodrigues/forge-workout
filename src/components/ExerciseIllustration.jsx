@@ -1,278 +1,517 @@
 import { useEffect, useRef } from 'react'
 import * as THREE from 'three'
 
-/* ─── Per-exercise 3D animation config ─────────────────── */
-const CONFIGS = {
-  'bench-press': {
-    light: 0xff3b3b, bg: '#0d080f',
-    bodyColor: 0xf4a261,
-    setup(fig, scene) {
-      // lying on back
-      fig.root.rotation.z = Math.PI / 2
-      fig.root.position.set(0, -0.15, 0)
-      // add bench
-      const bench = new THREE.Mesh(
-        new THREE.BoxGeometry(1.6, 0.08, 0.3),
-        new THREE.MeshPhongMaterial({ color: 0x222244, shininess: 80 })
-      )
-      bench.position.set(0, -0.45, 0)
-      scene.add(bench)
-      // barbell
-      const barMat = new THREE.MeshPhongMaterial({ color: 0xaaaacc, shininess: 120 })
-      const bar = new THREE.Mesh(new THREE.CylinderGeometry(0.025, 0.025, 1.4, 12), barMat)
-      bar.rotation.z = Math.PI / 2
-      fig.barbell = bar
-      fig.root.add(bar)
-      // plates
-      for (const x of [-0.6, 0.6]) {
-        const plate = new THREE.Mesh(new THREE.CylinderGeometry(0.13, 0.13, 0.04, 16), new THREE.MeshPhongMaterial({ color: 0xff3b3b }))
-        plate.rotation.z = Math.PI / 2
-        plate.position.x = x
-        fig.root.add(plate)
-      }
-    },
-    animate(fig, t) {
-      const press = (Math.sin(t * 1.1) + 1) / 2 // 0→1
-      // arms extend upward (in body space = along z when lying)
-      fig.lShoulder.rotation.x = -0.3 - press * 0.8
-      fig.rShoulder.rotation.x = -0.3 - press * 0.8
-      fig.lElbow.rotation.x = 0.6 - press * 0.5
-      fig.rElbow.rotation.x = 0.6 - press * 0.5
-      // barbell follows hands
-      if (fig.barbell) fig.barbell.position.z = 0.38 + press * 0.35
-    },
-  },
+const PI = Math.PI
 
-  'overhead-press': {
-    light: 0xff7a1a, bg: '#0f0a07',
-    bodyColor: 0xf4a261,
-    setup(fig) {
-      fig.root.position.set(0, -0.6, 0)
-      fig.lHip.rotation.x = 0; fig.rHip.rotation.x = 0
-      fig.lKnee.rotation.x = 0; fig.rKnee.rotation.x = 0
-    },
-    animate(fig, t) {
-      const press = (Math.sin(t * 1.0) + 1) / 2
-      fig.lShoulder.rotation.x = -(0.2 + press * 1.4)
-      fig.rShoulder.rotation.x = -(0.2 + press * 1.4)
-      fig.lElbow.rotation.x = -(0.1 + press * 0.6)
-      fig.rElbow.rotation.x = -(0.1 + press * 0.6)
-    },
-  },
+/* ── easing ── */
+const ss = x => { x = Math.max(0, Math.min(1, x)); return x * x * (3 - 2 * x) }
+const pulse = (t, spd = 1.0) => ss((Math.sin(t * spd * PI - PI * 0.5) + 1) / 2)
 
-  'squat': {
-    light: 0x06d6a0, bg: '#070f0c',
-    bodyColor: 0xf4a261,
-    setup(fig) {
-      fig.root.position.set(0, -0.2, 0)
-    },
-    animate(fig, t) {
-      const depth = (Math.sin(t * 0.9) + 1) / 2
-      // squat depth
-      fig.root.position.y = -0.2 - depth * 0.35
-      fig.lHip.rotation.x = depth * 1.6
-      fig.rHip.rotation.x = depth * 1.6
-      fig.lKnee.rotation.x = -(depth * 1.5)
-      fig.rKnee.rotation.x = -(depth * 1.5)
-      // slight lean
-      fig.torso.rotation.x = depth * 0.3
-    },
-  },
+/* ── equipment builders ── */
+function makeBarbell(len = 1.4, plateR = 0.13) {
+  const g = new THREE.Group()
+  const barMat = new THREE.MeshPhongMaterial({ color: 0xbbbbcc, shininess: 140 })
+  const plateMat = new THREE.MeshPhongMaterial({ color: 0xcc2222, shininess: 60 })
+  const collarMat = new THREE.MeshPhongMaterial({ color: 0x333344, shininess: 80 })
 
-  'pullup': {
-    light: 0x4cc9f0, bg: '#07090f',
-    bodyColor: 0xf4a261,
-    setup(fig, scene) {
-      fig.root.position.set(0, -0.4, 0)
-      fig.lHip.rotation.x = 0.3; fig.rHip.rotation.x = 0.3
-      fig.lKnee.rotation.x = -0.5; fig.rKnee.rotation.x = -0.5
-      const barMat = new THREE.MeshPhongMaterial({ color: 0x888899 })
-      const bar = new THREE.Mesh(new THREE.CylinderGeometry(0.025, 0.025, 1.2, 12), barMat)
-      bar.rotation.z = Math.PI / 2
-      bar.position.y = 1.35
-      scene.add(bar)
-    },
-    animate(fig, t) {
-      const pull = (Math.sin(t * 1.0) + 1) / 2
-      fig.root.position.y = -0.4 + pull * 0.5
-      fig.lShoulder.rotation.x = -(1.4 - pull * 0.8)
-      fig.rShoulder.rotation.x = -(1.4 - pull * 0.8)
-      fig.lElbow.rotation.x = -(1.0 - pull * 0.8)
-      fig.rElbow.rotation.x = -(1.0 - pull * 0.8)
-    },
-  },
+  const bar = new THREE.Mesh(new THREE.CylinderGeometry(0.022, 0.022, len, 10), barMat)
+  bar.rotation.z = PI / 2
+  g.add(bar)
 
-  'barbell-row': {
-    light: 0x4cc9f0, bg: '#07090f',
-    bodyColor: 0xf4a261,
-    setup(fig, scene) {
-      fig.torso.rotation.x = 0.8
-      fig.root.position.set(0, -0.5, 0)
-      fig.lHip.rotation.x = -0.2; fig.rHip.rotation.x = -0.2
-      const barMat = new THREE.MeshPhongMaterial({ color: 0xaaaacc, shininess: 120 })
-      const bar = new THREE.Mesh(new THREE.CylinderGeometry(0.025, 0.025, 1.2, 12), barMat)
-      bar.rotation.z = Math.PI / 2
-      fig.rowBar = bar
-      fig.root.add(bar)
-    },
-    animate(fig, t) {
-      const row = (Math.sin(t * 1.1) + 1) / 2
-      fig.lShoulder.rotation.x = 0.2 + row * 0.9
-      fig.rShoulder.rotation.x = 0.2 + row * 0.9
-      fig.lElbow.rotation.x = row * 1.1
-      fig.rElbow.rotation.x = row * 1.1
-      if (fig.rowBar) fig.rowBar.position.y = -0.55 + row * 0.3
-    },
-  },
-
-  'romanian-deadlift': {
-    light: 0x06d6a0, bg: '#070f0c',
-    bodyColor: 0xf4a261,
-    setup(fig, scene) {
-      fig.root.position.set(0, -0.5, 0)
-      const barMat = new THREE.MeshPhongMaterial({ color: 0xaaaacc, shininess: 120 })
-      const bar = new THREE.Mesh(new THREE.CylinderGeometry(0.025, 0.025, 1.2, 12), barMat)
-      bar.rotation.z = Math.PI / 2
-      fig.rdlBar = bar
-      fig.root.add(bar)
-    },
-    animate(fig, t) {
-      const hinge = (Math.sin(t * 0.9) + 1) / 2
-      fig.torso.rotation.x = hinge * 0.9
-      fig.lHip.rotation.x = hinge * 0.4
-      fig.rHip.rotation.x = hinge * 0.4
-      fig.lKnee.rotation.x = -(hinge * 0.2)
-      fig.rKnee.rotation.x = -(hinge * 0.2)
-      if (fig.rdlBar) {
-        fig.rdlBar.position.y = -0.5 - hinge * 0.4
-        fig.rdlBar.position.z = 0.1 + hinge * 0.05
-      }
-    },
-  },
-
-  'default': {
-    light: 0xff7a1a, bg: '#0a0a12',
-    bodyColor: 0xf4a261,
-    setup(fig) { fig.root.position.set(0, -0.6, 0) },
-    animate(fig, t) {
-      fig.lShoulder.rotation.x = Math.sin(t * 1.2) * 0.4
-      fig.rShoulder.rotation.x = -Math.sin(t * 1.2) * 0.4
-      fig.lHip.rotation.x = -Math.sin(t * 1.2) * 0.3
-      fig.rHip.rotation.x = Math.sin(t * 1.2) * 0.3
-    },
-  },
+  const platePositions = [-(len / 2 - 0.07), (len / 2 - 0.07)]
+  for (const x of platePositions) {
+    const plate = new THREE.Mesh(new THREE.CylinderGeometry(plateR, plateR, 0.045, 16), plateMat)
+    plate.rotation.z = PI / 2
+    plate.position.x = x
+    g.add(plate)
+    const collar = new THREE.Mesh(new THREE.CylinderGeometry(0.032, 0.032, 0.06, 10), collarMat)
+    collar.rotation.z = PI / 2
+    collar.position.x = x + (x < 0 ? -0.065 : 0.065)
+    g.add(collar)
+  }
+  return g
 }
 
-/* ─── Build stick figure from Three.js primitives ──────── */
-function buildFigure(scene, bodyColor) {
-  const mat = (color, emissive = 0x000000) =>
-    new THREE.MeshPhongMaterial({ color, emissive, shininess: 60 })
+function makeDumbbell(side = 1) {
+  const g = new THREE.Group()
+  const handleMat = new THREE.MeshPhongMaterial({ color: 0x444455, shininess: 100 })
+  const headMat = new THREE.MeshPhongMaterial({ color: 0x222233, shininess: 60 })
+  const handle = new THREE.Mesh(new THREE.CylinderGeometry(0.018, 0.018, 0.22, 8), handleMat)
+  handle.rotation.z = PI / 2
+  g.add(handle)
+  for (const x of [-0.13, 0.13]) {
+    const head = new THREE.Mesh(new THREE.SphereGeometry(0.055, 10, 8), headMat)
+    head.position.x = x * side
+    g.add(head)
+  }
+  return g
+}
 
-  const skin = mat(bodyColor, 0x110500)
-  const cloth = mat(0x2244cc, 0x000511)
-  const pant = mat(0x112266, 0x000208)
+function makeBench(tilt = 0) {
+  const g = new THREE.Group()
+  const padMat = new THREE.MeshPhongMaterial({ color: 0x111122, shininess: 40 })
+  const frameMat = new THREE.MeshPhongMaterial({ color: 0x333344, shininess: 100 })
+  const pad = new THREE.Mesh(new THREE.BoxGeometry(1.5, 0.07, 0.32), padMat)
+  pad.rotation.x = tilt
+  g.add(pad)
+  for (const x of [-0.58, 0.58]) {
+    for (const z of [-0.12, 0.12]) {
+      const leg = new THREE.Mesh(new THREE.CylinderGeometry(0.02, 0.02, 0.38, 8), frameMat)
+      leg.position.set(x, -0.22, z)
+      g.add(leg)
+    }
+  }
+  return g
+}
 
-  function seg(rx, ry, rz, len, material) {
-    const g = new THREE.CylinderGeometry(rx, rz, len, 10)
-    return new THREE.Mesh(g, material)
+function makePullBar() {
+  const g = new THREE.Group()
+  const mat = new THREE.MeshPhongMaterial({ color: 0x777788, shininess: 120 })
+  const bar = new THREE.Mesh(new THREE.CylinderGeometry(0.025, 0.025, 1.2, 10), mat)
+  bar.rotation.z = PI / 2
+  g.add(bar)
+  for (const x of [-0.55, 0.55]) {
+    const vert = new THREE.Mesh(new THREE.CylinderGeometry(0.02, 0.02, 0.28, 8), mat)
+    vert.position.set(x, 0.14, 0)
+    g.add(vert)
   }
-  function box(w, h, d, material) {
-    return new THREE.Mesh(new THREE.BoxGeometry(w, h, d), material)
-  }
-  function sph(r, material) {
-    return new THREE.Mesh(new THREE.SphereGeometry(r, 12, 10), material)
-  }
+  return g
+}
+
+/* ── figure builder ── */
+function buildFigure(scene, shirtColor) {
+  const skin = new THREE.MeshPhongMaterial({ color: 0xd4916a, emissive: 0x110500, shininess: 60 })
+  const shirt = new THREE.MeshPhongMaterial({ color: shirtColor, emissive: 0x050510, shininess: 40 })
+  const pants = new THREE.MeshPhongMaterial({ color: 0x1a1a33, shininess: 30 })
+  const shoe = new THREE.MeshPhongMaterial({ color: 0x111111, shininess: 60 })
+
+  const cyl = (rt, rb, h, mat, seg = 10) =>
+    new THREE.Mesh(new THREE.CylinderGeometry(rt, rb, h, seg), mat)
+  const box = (w, h, d, mat) =>
+    new THREE.Mesh(new THREE.BoxGeometry(w, h, d), mat)
+  const sph = (r, mat) =>
+    new THREE.Mesh(new THREE.SphereGeometry(r, 12, 10), mat)
 
   const root = new THREE.Group()
 
-  // Torso
-  const torso = box(0.3, 0.44, 0.18, cloth)
-  torso.position.y = 0.22
-  root.add(torso)
+  /* pelvis */
+  const pelvis = box(0.28, 0.13, 0.16, pants)
+  pelvis.position.y = 0
+  root.add(pelvis)
 
-  // Head
+  /* spine group — everything above pelvis */
+  const spine = new THREE.Group()
+  spine.position.y = 0.065
+  root.add(spine)
+
+  const torsoMesh = box(0.3, 0.42, 0.18, shirt)
+  torsoMesh.position.y = 0.21
+  spine.add(torsoMesh)
+
+  const neck = cyl(0.055, 0.055, 0.1, skin)
+  neck.position.y = 0.465
+  spine.add(neck)
+
   const head = sph(0.13, skin)
-  head.position.y = 0.62
-  root.add(head)
+  head.position.y = 0.585
+  spine.add(head)
 
-  // Hips
-  const hips = box(0.26, 0.16, 0.15, pant)
-  hips.position.y = -0.08
-  root.add(hips)
-
-  // ── Arms ─────────────
+  /* arms — children of spine so they lean with torso */
   function makeArm(side) {
-    const shoulderGroup = new THREE.Group()
-    shoulderGroup.position.set(side * 0.22, 0.35, 0)
+    const shoulderPivot = new THREE.Group()
+    shoulderPivot.position.set(side * 0.22, 0.35, 0)
+    spine.add(shoulderPivot)
 
-    const upper = seg(0.048, 0.042, 0.048, 0.28, skin)
+    const upper = cyl(0.048, 0.042, 0.28, skin)
     upper.position.y = -0.14
-    shoulderGroup.add(upper)
+    shoulderPivot.add(upper)
 
-    const elbowGroup = new THREE.Group()
-    elbowGroup.position.y = -0.28
-    const fore = seg(0.04, 0.036, 0.04, 0.26, skin)
-    fore.position.y = -0.13
-    elbowGroup.add(fore)
+    const elbowPivot = new THREE.Group()
+    elbowPivot.position.y = -0.28
+    shoulderPivot.add(elbowPivot)
 
-    const hand = sph(0.055, skin)
-    hand.position.y = -0.26
-    elbowGroup.add(hand)
+    const forearm = cyl(0.04, 0.035, 0.26, skin)
+    forearm.position.y = -0.13
+    elbowPivot.add(forearm)
 
-    shoulderGroup.add(elbowGroup)
-    root.add(shoulderGroup)
-    return { shoulder: shoulderGroup, elbow: elbowGroup }
+    const hand = sph(0.052, skin)
+    hand.position.y = -0.265
+    elbowPivot.add(hand)
+
+    return { shoulder: shoulderPivot, elbow: elbowPivot, hand }
   }
 
-  const leftArm = makeArm(-1)
-  const rightArm = makeArm(1)
+  const LA = makeArm(-1)
+  const RA = makeArm(1)
 
-  // ── Legs ─────────────
+  /* legs */
   function makeLeg(side) {
-    const hipGroup = new THREE.Group()
-    hipGroup.position.set(side * 0.1, -0.16, 0)
+    const hipPivot = new THREE.Group()
+    hipPivot.position.set(side * 0.1, -0.065, 0)
+    root.add(hipPivot)
 
-    const upper = seg(0.068, 0.062, 0.068, 0.38, pant)
-    upper.position.y = -0.19
-    hipGroup.add(upper)
+    const thigh = cyl(0.068, 0.062, 0.38, pants)
+    thigh.position.y = -0.19
+    hipPivot.add(thigh)
 
-    const kneeGroup = new THREE.Group()
-    kneeGroup.position.y = -0.38
+    const kneePivot = new THREE.Group()
+    kneePivot.position.y = -0.38
+    hipPivot.add(kneePivot)
 
-    const lower = seg(0.056, 0.05, 0.056, 0.35, pant)
-    lower.position.y = -0.175
-    kneeGroup.add(lower)
+    const shin = cyl(0.054, 0.048, 0.35, pants)
+    shin.position.y = -0.175
+    kneePivot.add(shin)
 
-    const foot = box(0.1, 0.07, 0.2, pant)
-    foot.position.set(0, -0.37, 0.04)
-    kneeGroup.add(foot)
+    const foot = box(0.1, 0.065, 0.22, shoe)
+    foot.position.set(0, -0.37, 0.05)
+    kneePivot.add(foot)
 
-    hipGroup.add(kneeGroup)
-    root.add(hipGroup)
-    return { hip: hipGroup, knee: kneeGroup }
+    return { hip: hipPivot, knee: kneePivot }
   }
 
-  const leftLeg = makeLeg(-1)
-  const rightLeg = makeLeg(1)
+  const LL = makeLeg(-1)
+  const RL = makeLeg(1)
 
   scene.add(root)
 
   return {
-    root,
-    torso,
-    head,
-    lShoulder: leftArm.shoulder,
-    lElbow:    leftArm.elbow,
-    rShoulder: rightArm.shoulder,
-    rElbow:    rightArm.elbow,
-    lHip:  leftLeg.hip,
-    lKnee: leftLeg.knee,
-    rHip:  rightLeg.hip,
-    rKnee: rightLeg.knee,
+    root, spine,
+    torso: torsoMesh,
+    lShoulder: LA.shoulder, lElbow: LA.elbow, lHand: LA.hand,
+    rShoulder: RA.shoulder, rElbow: RA.elbow, rHand: RA.hand,
+    lHip: LL.hip, lKnee: LL.knee,
+    rHip: RL.hip, rKnee: RL.knee,
   }
 }
 
-/* ─── React component ───────────────────────────────────── */
+/* helper: set barbell/dumbbell between hands */
+function trackBarToHands(fig, bar) {
+  fig.root.updateWorldMatrix(true, true)
+  const lPos = new THREE.Vector3()
+  const rPos = new THREE.Vector3()
+  fig.lHand.getWorldPosition(lPos)
+  fig.rHand.getWorldPosition(rPos)
+  const mid = lPos.clone().add(rPos).multiplyScalar(0.5)
+  bar.position.copy(mid)
+}
+
+/* ── per-exercise configs ── */
+const CONFIGS = {
+  'bench-press': {
+    light: 0xff3b3b, bg: '#0d080f', shirt: 0x991122,
+    cam: { pos: [2.2, 1.0, 1.8], look: [0.2, 0, 0] },
+    setup(fig, scene) {
+      fig.root.rotation.z = -PI / 2
+      fig.root.position.set(0, -0.1, 0)
+      const bench = makeBench()
+      bench.position.set(0, -0.52, 0)
+      bench.rotation.z = PI / 2
+      scene.add(bench)
+      const bar = makeBarbell(1.4)
+      scene.add(bar)
+      fig._bar = bar
+      fig.lShoulder.rotation.z = 0.35
+      fig.rShoulder.rotation.z = -0.35
+    },
+    animate(fig, t) {
+      const p = pulse(t, 0.55)
+      fig.lShoulder.rotation.x = -(0.25 + p * 0.75)
+      fig.rShoulder.rotation.x = -(0.25 + p * 0.75)
+      fig.lElbow.rotation.x = 0.55 - p * 0.5
+      fig.rElbow.rotation.x = 0.55 - p * 0.5
+      if (fig._bar) trackBarToHands(fig, fig._bar)
+    },
+  },
+
+  'overhead-press': {
+    light: 0xff7a1a, bg: '#0f0a07', shirt: 0x991122,
+    cam: { pos: [2.2, 0.5, 2.2], look: [0, 0.3, 0] },
+    setup(fig, scene) {
+      fig.root.position.set(0, -0.62, 0)
+      const bar = makeBarbell(1.2)
+      scene.add(bar)
+      fig._bar = bar
+    },
+    animate(fig, t) {
+      const p = pulse(t, 0.5)
+      const angle = -(0.2 + p * 1.5)
+      fig.lShoulder.rotation.x = angle
+      fig.rShoulder.rotation.x = angle
+      fig.lElbow.rotation.x = -(p * 0.5)
+      fig.rElbow.rotation.x = -(p * 0.5)
+      if (fig._bar) trackBarToHands(fig, fig._bar)
+    },
+  },
+
+  'incline-press': {
+    light: 0xff3b3b, bg: '#0d080f', shirt: 0x991122,
+    cam: { pos: [2.2, 1.2, 1.8], look: [0.1, 0.1, 0] },
+    setup(fig, scene) {
+      fig.root.rotation.z = -PI / 2
+      fig.root.rotation.x = -0.35
+      fig.root.position.set(0, -0.1, -0.1)
+      const bench = makeBench(0.35)
+      bench.position.set(0, -0.52, 0)
+      bench.rotation.z = PI / 2
+      scene.add(bench)
+      const bar = makeBarbell(1.4)
+      scene.add(bar)
+      fig._bar = bar
+      fig.lShoulder.rotation.z = 0.3
+      fig.rShoulder.rotation.z = -0.3
+    },
+    animate(fig, t) {
+      const p = pulse(t, 0.55)
+      fig.lShoulder.rotation.x = -(0.3 + p * 0.8)
+      fig.rShoulder.rotation.x = -(0.3 + p * 0.8)
+      fig.lElbow.rotation.x = 0.5 - p * 0.45
+      fig.rElbow.rotation.x = 0.5 - p * 0.45
+      if (fig._bar) trackBarToHands(fig, fig._bar)
+    },
+  },
+
+  'lateral-raise': {
+    light: 0xff7a1a, bg: '#0f0a07', shirt: 0x991122,
+    cam: { pos: [0, 0.4, 3.2], look: [0, 0.2, 0] },
+    setup(fig, scene) {
+      fig.root.position.set(0, -0.62, 0)
+      const dL = makeDumbbell(-1)
+      const dR = makeDumbbell(1)
+      scene.add(dL)
+      scene.add(dR)
+      fig._dL = dL
+      fig._dR = dR
+    },
+    animate(fig, t) {
+      const p = pulse(t, 0.6)
+      fig.lShoulder.rotation.z = -(p * 1.1)
+      fig.rShoulder.rotation.z = p * 1.1
+      fig.lElbow.rotation.z = -(p * 0.15)
+      fig.rElbow.rotation.z = p * 0.15
+      if (fig._dL) {
+        fig.root.updateWorldMatrix(true, true)
+        const lPos = new THREE.Vector3()
+        const rPos = new THREE.Vector3()
+        fig.lHand.getWorldPosition(lPos)
+        fig.rHand.getWorldPosition(rPos)
+        fig._dL.position.copy(lPos)
+        fig._dR.position.copy(rPos)
+      }
+    },
+  },
+
+  'pullup': {
+    light: 0x4cc9f0, bg: '#07090f', shirt: 0x0a2a6e,
+    cam: { pos: [2.2, 0.6, 2.5], look: [0, 0.3, 0] },
+    setup(fig, scene) {
+      fig.root.position.set(0, -0.55, 0)
+      fig.lHip.rotation.x = 0.25
+      fig.rHip.rotation.x = 0.25
+      fig.lKnee.rotation.x = -0.5
+      fig.rKnee.rotation.x = -0.5
+      const pullBar = makePullBar()
+      pullBar.position.y = 1.45
+      scene.add(pullBar)
+    },
+    animate(fig, t) {
+      const p = pulse(t, 0.5)
+      fig.root.position.y = -0.55 + p * 0.5
+      const armAngle = -(1.45 - p * 0.9)
+      fig.lShoulder.rotation.x = armAngle
+      fig.rShoulder.rotation.x = armAngle
+      fig.lElbow.rotation.x = -(1.1 - p * 0.9)
+      fig.rElbow.rotation.x = -(1.1 - p * 0.9)
+    },
+  },
+
+  'barbell-row': {
+    light: 0x4cc9f0, bg: '#07090f', shirt: 0x0a2a6e,
+    cam: { pos: [2.8, 0.8, 1.2], look: [0, 0, 0] },
+    setup(fig, scene) {
+      fig.root.position.set(0, -0.55, 0)
+      fig.spine.rotation.x = 0.82
+      fig.lHip.rotation.x = -0.18
+      fig.rHip.rotation.x = -0.18
+      fig.lKnee.rotation.x = 0.15
+      fig.rKnee.rotation.x = 0.15
+      const bar = makeBarbell(1.3)
+      scene.add(bar)
+      fig._bar = bar
+    },
+    animate(fig, t) {
+      const p = pulse(t, 0.55)
+      fig.lShoulder.rotation.x = 0.15 + p * 1.0
+      fig.rShoulder.rotation.x = 0.15 + p * 1.0
+      fig.lElbow.rotation.x = p * 1.1
+      fig.rElbow.rotation.x = p * 1.1
+      if (fig._bar) trackBarToHands(fig, fig._bar)
+    },
+  },
+
+  'face-pull': {
+    light: 0x4cc9f0, bg: '#07090f', shirt: 0x0a2a6e,
+    cam: { pos: [2.2, 0.5, 2.2], look: [0, 0.2, 0] },
+    setup(fig, scene) {
+      fig.root.position.set(0, -0.62, 0)
+      const rope = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.012, 0.012, 0.6, 6),
+        new THREE.MeshPhongMaterial({ color: 0x888877 })
+      )
+      rope.rotation.z = PI / 2
+      rope.position.set(0, 0.2, 0.4)
+      scene.add(rope)
+      fig._rope = rope
+    },
+    animate(fig, t) {
+      const p = pulse(t, 0.55)
+      fig.lShoulder.rotation.x = -(0.3 + p * 0.5)
+      fig.rShoulder.rotation.x = -(0.3 + p * 0.5)
+      fig.lShoulder.rotation.y = 0.5 + p * 0.4
+      fig.rShoulder.rotation.y = -(0.5 + p * 0.4)
+      fig.lElbow.rotation.x = -(0.6 + p * 0.8)
+      fig.rElbow.rotation.x = -(0.6 + p * 0.8)
+    },
+  },
+
+  'bicep-curl': {
+    light: 0xff7a1a, bg: '#0f0a07', shirt: 0x991122,
+    cam: { pos: [2.2, 0.4, 2.2], look: [0, 0.1, 0] },
+    setup(fig, scene) {
+      fig.root.position.set(0, -0.62, 0)
+      const dL = makeDumbbell(-1)
+      const dR = makeDumbbell(1)
+      scene.add(dL)
+      scene.add(dR)
+      fig._dL = dL
+      fig._dR = dR
+    },
+    animate(fig, t) {
+      const p = pulse(t, 0.6)
+      fig.lElbow.rotation.x = -(p * 1.8)
+      fig.rElbow.rotation.x = -(p * 1.8)
+      fig.lShoulder.rotation.x = -(p * 0.15)
+      fig.rShoulder.rotation.x = -(p * 0.15)
+      if (fig._dL) {
+        fig.root.updateWorldMatrix(true, true)
+        const lPos = new THREE.Vector3()
+        const rPos = new THREE.Vector3()
+        fig.lHand.getWorldPosition(lPos)
+        fig.rHand.getWorldPosition(rPos)
+        fig._dL.position.copy(lPos)
+        fig._dR.position.copy(rPos)
+      }
+    },
+  },
+
+  'squat': {
+    light: 0x06d6a0, bg: '#070f0c', shirt: 0x0a4a30,
+    cam: { pos: [2.4, 0.3, 2.2], look: [0, 0.1, 0] },
+    setup(fig, scene) {
+      fig.root.position.set(0, -0.25, 0)
+      const bar = makeBarbell(1.5, 0.14)
+      scene.add(bar)
+      fig._bar = bar
+    },
+    animate(fig, t) {
+      const p = pulse(t, 0.5)
+      fig.root.position.y = -0.25 - p * 0.38
+      fig.lHip.rotation.x = p * 1.7
+      fig.rHip.rotation.x = p * 1.7
+      fig.lKnee.rotation.x = -(p * 1.55)
+      fig.rKnee.rotation.x = -(p * 1.55)
+      fig.spine.rotation.x = p * 0.28
+      if (fig._bar) {
+        fig.root.updateWorldMatrix(true, true)
+        const spinePos = new THREE.Vector3()
+        fig.spine.getWorldPosition(spinePos)
+        fig._bar.position.set(spinePos.x, spinePos.y + 0.25, spinePos.z - 0.06)
+      }
+    },
+  },
+
+  'romanian-deadlift': {
+    light: 0x06d6a0, bg: '#070f0c', shirt: 0x0a4a30,
+    cam: { pos: [2.8, 0.5, 1.6], look: [0, 0, 0] },
+    setup(fig, scene) {
+      fig.root.position.set(0, -0.55, 0)
+      const bar = makeBarbell(1.3, 0.14)
+      scene.add(bar)
+      fig._bar = bar
+    },
+    animate(fig, t) {
+      const p = pulse(t, 0.5)
+      fig.spine.rotation.x = p * 0.95
+      fig.lHip.rotation.x = p * 0.38
+      fig.rHip.rotation.x = p * 0.38
+      fig.lKnee.rotation.x = -(p * 0.18)
+      fig.rKnee.rotation.x = -(p * 0.18)
+      if (fig._bar) trackBarToHands(fig, fig._bar)
+    },
+  },
+
+  'leg-press': {
+    light: 0x06d6a0, bg: '#070f0c', shirt: 0x0a4a30,
+    cam: { pos: [2.5, 0.5, 1.8], look: [0, -0.1, 0] },
+    setup(fig, scene) {
+      fig.root.rotation.z = -PI * 0.45
+      fig.root.position.set(0, -0.2, 0)
+      const seat = new THREE.Mesh(
+        new THREE.BoxGeometry(0.45, 0.08, 0.38),
+        new THREE.MeshPhongMaterial({ color: 0x111122 })
+      )
+      seat.position.set(0, -0.45, 0)
+      seat.rotation.z = PI * 0.45
+      scene.add(seat)
+      const back = new THREE.Mesh(
+        new THREE.BoxGeometry(0.08, 0.5, 0.38),
+        new THREE.MeshPhongMaterial({ color: 0x111122 })
+      )
+      back.position.set(-0.5, -0.2, 0)
+      scene.add(back)
+    },
+    animate(fig, t) {
+      const p = pulse(t, 0.5)
+      fig.lHip.rotation.x = 0.8 + p * 0.9
+      fig.rHip.rotation.x = 0.8 + p * 0.9
+      fig.lKnee.rotation.x = -(0.6 + p * 1.0)
+      fig.rKnee.rotation.x = -(0.6 + p * 1.0)
+    },
+  },
+
+  'calf-raise': {
+    light: 0x06d6a0, bg: '#070f0c', shirt: 0x0a4a30,
+    cam: { pos: [2.5, 0.2, 2.2], look: [0, 0, 0] },
+    setup(fig, scene) {
+      fig.root.position.set(0, -0.62, 0)
+      const platform = new THREE.Mesh(
+        new THREE.BoxGeometry(0.5, 0.08, 0.3),
+        new THREE.MeshPhongMaterial({ color: 0x222233 })
+      )
+      platform.position.y = -0.82
+      scene.add(platform)
+    },
+    animate(fig, t) {
+      const p = pulse(t, 0.7)
+      fig.root.position.y = -0.62 + p * 0.12
+      fig.lKnee.rotation.x = -(p * 0.08)
+      fig.rKnee.rotation.x = -(p * 0.08)
+    },
+  },
+
+  'default': {
+    light: 0xff7a1a, bg: '#0a0a12', shirt: 0x222266,
+    cam: { pos: [0, 0.3, 3.4], look: [0, 0.2, 0] },
+    setup(fig) { fig.root.position.set(0, -0.62, 0) },
+    animate(fig, t) {
+      fig.lShoulder.rotation.x = Math.sin(t * 1.2) * 0.35
+      fig.rShoulder.rotation.x = -Math.sin(t * 1.2) * 0.35
+      fig.lHip.rotation.x = -Math.sin(t * 1.2) * 0.28
+      fig.rHip.rotation.x = Math.sin(t * 1.2) * 0.28
+    },
+  },
+}
+
+/* ── React component ── */
 export default function ExerciseIllustration({ exerciseId }) {
   const mountRef = useRef(null)
 
@@ -280,73 +519,66 @@ export default function ExerciseIllustration({ exerciseId }) {
     const mount = mountRef.current
     if (!mount) return
 
-    const config = CONFIGS[exerciseId] ?? CONFIGS['default']
+    const cfg = CONFIGS[exerciseId] ?? CONFIGS['default']
     const W = mount.clientWidth || 320
     const H = mount.clientHeight || 200
 
-    // Scene
     const scene = new THREE.Scene()
-    scene.background = new THREE.Color(config.bg)
-    scene.fog = new THREE.Fog(config.bg, 6, 14)
+    scene.background = new THREE.Color(cfg.bg)
+    scene.fog = new THREE.Fog(cfg.bg, 7, 16)
 
-    // Camera
-    const camera = new THREE.PerspectiveCamera(40, W / H, 0.1, 50)
-    camera.position.set(0, 0.3, 3.4)
-    camera.lookAt(0, 0.2, 0)
+    const camera = new THREE.PerspectiveCamera(38, W / H, 0.1, 50)
+    const cp = cfg.cam?.pos ?? [0, 0.3, 3.4]
+    const cl = cfg.cam?.look ?? [0, 0.2, 0]
+    camera.position.set(...cp)
+    camera.lookAt(...cl)
 
-    // Renderer
     const renderer = new THREE.WebGLRenderer({ antialias: true })
     renderer.setSize(W, H)
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2))
     renderer.shadowMap.enabled = true
     mount.appendChild(renderer.domElement)
 
-    // Lights
-    scene.add(new THREE.AmbientLight(0x222233, 2.5))
+    scene.add(new THREE.AmbientLight(0x1a1a2e, 3.5))
 
-    const keyLight = new THREE.DirectionalLight(config.light, 3.5)
-    keyLight.position.set(2, 3, 2)
-    keyLight.castShadow = true
-    scene.add(keyLight)
+    const key = new THREE.DirectionalLight(cfg.light, 4.0)
+    key.position.set(2.5, 3, 2)
+    key.castShadow = true
+    scene.add(key)
 
-    const rimLight = new THREE.DirectionalLight(0x334455, 1.5)
-    rimLight.position.set(-3, 1, -2)
-    scene.add(rimLight)
+    const rim = new THREE.DirectionalLight(0x334466, 2.0)
+    rim.position.set(-3, 1, -2)
+    scene.add(rim)
 
-    // Grid floor
-    const grid = new THREE.GridHelper(6, 12, 0x111133, 0x0d0d22)
-    grid.position.y = -0.85
+    const fill = new THREE.DirectionalLight(0xffffff, 0.8)
+    fill.position.set(0, -2, 3)
+    scene.add(fill)
+
+    const grid = new THREE.GridHelper(6, 14, 0x0d0d22, 0x080818)
+    grid.position.y = -0.88
     scene.add(grid)
 
-    // Figure
-    const fig = buildFigure(scene, config.bodyColor ?? 0xf4a261)
-    config.setup(fig, scene)
+    const glowMesh = new THREE.Mesh(
+      new THREE.SphereGeometry(0.7, 16, 16),
+      new THREE.MeshBasicMaterial({ color: cfg.light, transparent: true, opacity: 0.055 })
+    )
+    glowMesh.position.set(0, 0.2, -0.6)
+    scene.add(glowMesh)
 
-    // Glow sphere (accent color behind figure)
-    const glowGeo = new THREE.SphereGeometry(0.6, 16, 16)
-    const glowMat = new THREE.MeshBasicMaterial({
-      color: config.light,
-      transparent: true,
-      opacity: 0.06,
-    })
-    const glow = new THREE.Mesh(glowGeo, glowMat)
-    glow.position.set(0, 0.3, -0.5)
-    scene.add(glow)
+    const fig = buildFigure(scene, cfg.shirt)
+    cfg.setup(fig, scene)
 
-    // Animate
     const clock = new THREE.Clock()
     let rafId
     const tick = () => {
       rafId = requestAnimationFrame(tick)
       const t = clock.getElapsedTime()
-      config.animate(fig, t)
-      // gentle scene rotation
-      scene.rotation.y = Math.sin(t * 0.2) * 0.12
+      cfg.animate(fig, t)
+      scene.rotation.y = Math.sin(t * 0.18) * 0.1
       renderer.render(scene, camera)
     }
     tick()
 
-    // Resize observer
     const ro = new ResizeObserver(() => {
       const nW = mount.clientWidth
       const nH = mount.clientHeight
