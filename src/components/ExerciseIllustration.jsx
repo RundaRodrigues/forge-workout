@@ -498,38 +498,50 @@ const CONFIGS = {
     },
   },
 
-  'dumbbell-fly': {
+  'machine-fly': {
     light: 0xff3b3b, bg: '#0d080f', shirt: 0x991122,
-    cam: { pos: [2.5, 1.0, 1.6], look: [0.1, 0, 0] },
+    cam: { pos: [0, 0.4, 3.2], look: [0, 0.2, 0] },
     setup(fig, scene) {
-      fig.root.rotation.z = -PI / 2
-      fig.root.position.set(0, -0.1, 0)
-      const bench = makeBench()
-      bench.position.set(0, -0.52, 0)
-      bench.rotation.z = PI / 2
-      scene.add(bench)
-      const dL = makeDumbbell(-1)
-      const dR = makeDumbbell(1)
-      scene.add(dL); scene.add(dR)
-      fig._dL = dL; fig._dR = dR
+      fig.root.position.set(0, -0.62, 0)
+      // machine seat
+      const seat = new THREE.Mesh(
+        new THREE.BoxGeometry(0.32, 0.07, 0.32),
+        new THREE.MeshPhongMaterial({ color: 0x111122 })
+      )
+      seat.position.set(0, -0.7, 0)
+      scene.add(seat)
+      // machine frame poles (left & right)
+      const frameMat = new THREE.MeshPhongMaterial({ color: 0x333344, shininess: 90 })
+      for (const x of [-0.7, 0.7]) {
+        const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.022, 0.022, 1.6, 8), frameMat)
+        pole.position.set(x, 0.1, -0.1)
+        scene.add(pole)
+        // cable handle sphere
+        const handle = new THREE.Mesh(new THREE.SphereGeometry(0.04, 8, 8),
+          new THREE.MeshPhongMaterial({ color: 0x555566 }))
+        handle.position.set(x * 0.75, 0.2, 0)
+        scene.add(handle)
+        fig[x < 0 ? '_hL' : '_hR'] = handle
+      }
     },
     animate(fig, t) {
-      const p = pulse(t, 0.55)
-      // arms sweep wide (fly arc)
-      fig.lShoulder.rotation.x = -(0.1 + p * 0.6)
-      fig.rShoulder.rotation.x = -(0.1 + p * 0.6)
-      fig.lShoulder.rotation.z = 0.2 + (1 - p) * 1.1
-      fig.rShoulder.rotation.z = -(0.2 + (1 - p) * 1.1)
-      fig.lElbow.rotation.x = 0.2
-      fig.rElbow.rotation.x = 0.2
-      if (fig._dL) {
+      const p = pulse(t, 0.6)
+      // arms sweep from wide open to closed in front
+      fig.lShoulder.rotation.z = -(0.1 + (1 - p) * 1.2)
+      fig.rShoulder.rotation.z = 0.1 + (1 - p) * 1.2
+      fig.lShoulder.rotation.x = -(p * 0.2)
+      fig.rShoulder.rotation.x = -(p * 0.2)
+      fig.lElbow.rotation.x = 0.15
+      fig.rElbow.rotation.x = 0.15
+      // handles track hands
+      if (fig._hL) {
         fig.root.updateWorldMatrix(true, true)
         const lPos = new THREE.Vector3()
         const rPos = new THREE.Vector3()
         fig.lHand.getWorldPosition(lPos)
         fig.rHand.getWorldPosition(rPos)
-        fig._dL.position.copy(lPos)
-        fig._dR.position.copy(rPos)
+        fig._hL.position.copy(lPos)
+        fig._hR.position.copy(rPos)
       }
     },
   },

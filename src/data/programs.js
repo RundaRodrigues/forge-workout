@@ -15,7 +15,7 @@ export const PROGRAMS = {
           { exerciseId: 'overhead-press',sets: 3, repRange: [5, 8]  },
           { exerciseId: 'incline-press', sets: 2, repRange: [6, 10] },
           { exerciseId: 'lateral-raise', sets: 3, repRange: [12, 20]},
-          { exerciseId: 'dumbbell-fly',  sets: 3, repRange: [10, 15]},
+          { exerciseId: 'machine-fly',   sets: 3, repRange: [12, 15]},
         ],
       },
       {

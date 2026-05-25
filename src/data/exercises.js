@@ -53,17 +53,17 @@ export const EXERCISES = {
     emoji: '✈️',
   },
 
-  'dumbbell-fly': {
-    id: 'dumbbell-fly',
-    name: 'Fly de Halter',
-    nameEn: 'Dumbbell Fly',
+  'machine-fly': {
+    id: 'machine-fly',
+    name: 'Fly Máquina',
+    nameEn: 'Machine Fly / Pec Deck',
     category: 'push',
     type: 'isolation',
     muscles: ['Peitoral', 'Deltóide Anterior'],
     defaultSets: 3,
-    repRange: [10, 15],
+    repRange: [12, 15],
     rest: { recommended: 90, min: 60, max: 120 },
-    cues: ['Leve flexão nos cotovelos', 'Abre até sentir o alongamento', 'Contrai o peitoral no topo'],
+    cues: ['Tensão constante no cabo', 'Contrai o peitoral no centro', 'Controla a abertura 3s'],
     emoji: '🦅',
   },
 
