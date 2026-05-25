@@ -14,7 +14,8 @@ function formatElapsed(ms) {
 export default function WorkoutScreen({ activeWorkout, onUpdateWorkout, onFinishWorkout, history }) {
   const [elapsed, setElapsed] = useState(0)
   const [selectedExIdx, setSelectedExIdx] = useState(0)
-  const [restTimer, setRestTimer] = useState(null) // { duration, exerciseId }
+  const [restTimer, setRestTimer] = useState(null)
+  const [confirmFinish, setConfirmFinish] = useState(false)
 
   // Elapsed clock
   useEffect(() => {
@@ -253,18 +254,40 @@ export default function WorkoutScreen({ activeWorkout, onUpdateWorkout, onFinish
           </div>
         </div>
 
-        {/* Cues */}
-        {allDone() && (
-          <div style={{ marginTop: 24 }}>
+        {/* Finish button */}
+        <div style={{ marginTop: 24 }}>
+          {confirmFinish && !allDone() ? (
+            <div className="card-2" style={{ display: 'flex', flexDirection: 'column', gap: 10, alignItems: 'center' }}>
+              <p style={{ fontSize: 13, fontWeight: 600, textAlign: 'center' }}>
+                Ainda há sets incompletos. Finalizar mesmo assim?
+              </p>
+              <div className="row gap-8 w-full">
+                <button
+                  className="btn btn-primary w-full"
+                  style={{ fontSize: 14 }}
+                  onClick={onFinishWorkout}
+                >
+                  🏁 Finalizar
+                </button>
+                <button
+                  className="btn btn-ghost w-full"
+                  style={{ fontSize: 14 }}
+                  onClick={() => setConfirmFinish(false)}
+                >
+                  Voltar
+                </button>
+              </div>
+            </div>
+          ) : (
             <button
               className="btn btn-primary w-full"
-              style={{ fontSize: 16, padding: '18px', borderRadius: 'var(--r-xl)' }}
-              onClick={onFinishWorkout}
+              style={{ fontSize: 16, padding: '18px', borderRadius: 'var(--r-xl)', opacity: allDone() ? 1 : 0.7 }}
+              onClick={() => allDone() ? onFinishWorkout() : setConfirmFinish(true)}
             >
               🏁 Finalizar Treino
             </button>
-          </div>
-        )}
+          )}
+        </div>
       </div>
 
       {/* Rest timer overlay */}
