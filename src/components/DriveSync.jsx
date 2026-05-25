@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import {
   getStoredClientId, saveClientId,
   initGIS, requestToken, requestTokenSilent, signOut,
@@ -7,6 +7,7 @@ import {
 } from '../services/googleDrive.js'
 
 const STATUS = { idle: 'idle', auth: 'auth', saving: 'saving', loading: 'loading', done: 'done', error: 'error' }
+const TOKEN_REFRESH_MS = 45 * 60 * 1000 // refresh 15min before expiry (token lives 1h)
 
 function formatTime(ts) {
   if (!ts) return ''
@@ -21,8 +22,45 @@ export default function DriveSync({ data, onLoad, autoSync, onManualSync }) {
   const [msg, setMsg] = useState('')
   const [authed, setAuthed] = useState(false)
 
-  const gisReady = !!window.google?.accounts?.oauth2
+  // ── Reactive GIS detection ──────────────────────────────────────────
+  // window.google.accounts.oauth2 loads async via script tag;
+  // we poll until it's available so the init effect fires correctly.
+  const [gisReady, setGisReady] = useState(!!window.google?.accounts?.oauth2)
+  useEffect(() => {
+    if (gisReady) return
+    const t = setInterval(() => {
+      if (window.google?.accounts?.oauth2) {
+        setGisReady(true)
+        clearInterval(t)
+      }
+    }, 200)
+    return () => clearInterval(t)
+  }, [gisReady])
 
+  // ── Init GIS + silent reconnect on mount ────────────────────────────
+  useEffect(() => {
+    if (!clientId || !gisReady) return
+    initGIS(
+      clientId,
+      () => { setAuthed(true) },
+      (err) => { setStatus(STATUS.error); setMsg(String(err)) }
+    )
+    // Delay gives GIS time to finish internal setup before we request
+    if (wasPreviouslyAuthed()) {
+      setTimeout(requestTokenSilent, 800)
+    }
+  }, [clientId, gisReady])
+
+  // ── Keep-alive: refresh token every 45 min while app is open ────────
+  const refreshRef = useRef(null)
+  useEffect(() => {
+    if (!authed) return
+    clearInterval(refreshRef.current)
+    refreshRef.current = setInterval(requestTokenSilent, TOKEN_REFRESH_MS)
+    return () => clearInterval(refreshRef.current)
+  }, [authed])
+
+  // ── Manual actions ──────────────────────────────────────────────────
   function setup() {
     if (!draftId.trim()) return
     saveClientId(draftId)
@@ -33,19 +71,6 @@ export default function DriveSync({ data, onLoad, autoSync, onManualSync }) {
       (err) => { setStatus(STATUS.error); setMsg(String(err)) }
     )
   }
-
-  useEffect(() => {
-    if (clientId && gisReady) {
-      initGIS(
-        clientId,
-        () => { setAuthed(true) },
-        (err) => { setStatus(STATUS.error); setMsg(String(err)) }
-      )
-      if (wasPreviouslyAuthed()) {
-        requestTokenSilent()
-      }
-    }
-  }, [clientId, gisReady])
 
   function handleAuth() {
     setStatus(STATUS.auth)
@@ -90,55 +115,39 @@ export default function DriveSync({ data, onLoad, autoSync, onManualSync }) {
     setAuthed(false)
     setStatus(STATUS.idle)
     setMsg('')
+    clearInterval(refreshRef.current)
   }
 
+  // ── Chip appearance ─────────────────────────────────────────────────
   const busy = status === STATUS.saving || status === STATUS.loading || status === STATUS.auth
 
-  // Merge auto-sync status into chip display
   const isAutoSyncing = autoSync?.state === 'syncing'
   const autoSynced    = autoSync?.state === 'done'
   const autoError     = autoSync?.state === 'error'
 
-  const chipIcon = isAutoSyncing ? '⏳'
-    : autoSynced  ? '✅'
-    : autoError   ? '⚠️'
-    : authed      ? '☁️'
-    : '☁️'
-
+  const chipIcon  = isAutoSyncing ? '⏳' : autoSynced ? '✅' : autoError ? '⚠️' : '☁️'
   const chipLabel = isAutoSyncing ? 'Salvando…'
     : autoSynced  ? `Salvo ${formatTime(autoSync.time)}`
     : autoError   ? 'Erro ao salvar'
     : authed      ? 'Drive'
     : 'Conectar Drive'
 
-  const chipColor = isAutoSyncing || autoSynced ? 'var(--green)'
-    : autoError   ? 'var(--red)'
-    : authed      ? 'var(--green)'
-    : 'var(--text-2)'
-
-  const chipBg = isAutoSyncing || autoSynced ? 'rgba(6,214,160,.12)'
-    : autoError   ? 'rgba(255,59,59,.12)'
-    : authed      ? 'rgba(6,214,160,.12)'
-    : 'var(--surface-2)'
-
-  const chipBorder = isAutoSyncing || autoSynced ? 'rgba(6,214,160,.3)'
-    : autoError   ? 'rgba(255,59,59,.3)'
-    : authed      ? 'rgba(6,214,160,.3)'
-    : 'var(--border)'
+  const isGreen  = isAutoSyncing || autoSynced || authed
+  const chipColor  = isGreen ? 'var(--green)' : autoError ? 'var(--red)' : 'var(--text-2)'
+  const chipBg     = isGreen ? 'rgba(6,214,160,.12)' : autoError ? 'rgba(255,59,59,.12)' : 'var(--surface-2)'
+  const chipBorder = isGreen ? 'rgba(6,214,160,.3)'  : autoError ? 'rgba(255,59,59,.3)'  : 'var(--border)'
 
   return (
     <>
-      {/* Sync chip in the UI */}
+      {/* Sync chip */}
       <button
         onClick={() => setOpen(true)}
         style={{
           display: 'flex', alignItems: 'center', gap: 6,
-          background: chipBg,
-          border: `1px solid ${chipBorder}`,
+          background: chipBg, border: `1px solid ${chipBorder}`,
           borderRadius: 999, padding: '5px 12px',
-          color: chipColor,
-          fontSize: 12, fontWeight: 600, fontFamily: 'inherit',
-          cursor: 'pointer',
+          color: chipColor, fontSize: 12, fontWeight: 600,
+          fontFamily: 'inherit', cursor: 'pointer',
           transition: 'all .3s ease',
         }}
       >
@@ -172,11 +181,14 @@ export default function DriveSync({ data, onLoad, autoSync, onManualSync }) {
 
             <h2 className="h3" style={{ marginBottom: 6 }}>☁️ Google Drive Sync</h2>
             <p className="caption" style={{ marginBottom: 20 }}>
-              Seus treinos ficam salvos no arquivo <code style={{ background: 'var(--surface-2)', padding: '1px 5px', borderRadius: 4, fontSize: 11 }}>forge-workout-backup.json</code> no seu Drive.
+              Seus treinos ficam salvos no arquivo{' '}
+              <code style={{ background: 'var(--surface-2)', padding: '1px 5px', borderRadius: 4, fontSize: 11 }}>
+                forge-workout-backup.json
+              </code>{' '}
+              no seu Drive.
             </p>
 
             {!clientId ? (
-              /* Setup: needs Client ID */
               <div>
                 <p style={{ fontSize: 13, fontWeight: 600, marginBottom: 8 }}>
                   Cole seu Google OAuth Client ID:
@@ -205,7 +217,6 @@ export default function DriveSync({ data, onLoad, autoSync, onManualSync }) {
                 </button>
               </div>
             ) : (
-              /* Main sync actions */
               <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
                 {!authed ? (
                   <button className="btn btn-primary w-full" onClick={handleAuth} disabled={busy}>
@@ -254,7 +265,11 @@ export default function DriveSync({ data, onLoad, autoSync, onManualSync }) {
                   </p>
                   <div style={{ display: 'flex', gap: 8 }}>
                     {authed && (
-                      <button className="btn btn-ghost" style={{ fontSize: 11, padding: '6px 10px' }} onClick={handleSignOut}>
+                      <button
+                        className="btn btn-ghost"
+                        style={{ fontSize: 11, padding: '6px 10px' }}
+                        onClick={handleSignOut}
+                      >
                         Sair
                       </button>
                     )}
@@ -287,7 +302,7 @@ function SetupGuide() {
         'Acesse console.cloud.google.com e crie um projeto',
         'APIs e Serviços → Ativar APIs → ative "Google Drive API"',
         'Credenciais → Criar credencial → ID do cliente OAuth → Aplicativo da Web',
-        'Em "Origens JS autorizadas" adicione: http://localhost:5173',
+        'Em "Origens JS autorizadas" adicione sua origem (ex: https://rundarodrigues.github.io)',
         'Copie o Client ID gerado e cole acima',
       ].map((step, i) => (
         <div key={i} style={{ display: 'flex', gap: 8, marginBottom: 6 }}>
