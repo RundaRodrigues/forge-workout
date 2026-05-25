@@ -477,6 +477,9 @@ html, body {
   font-weight: 800;
   letter-spacing: -0.5px;
   margin-bottom: 2px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 .stat-value.grad { background: var(--grad); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
 
@@ -541,6 +544,7 @@ html, body {
   font-size: 12px;
   font-weight: 600;
   color: var(--text-2);
+  white-space: nowrap;
 }
 
 /* ─── Animations ─────────────────────────────────────────── */

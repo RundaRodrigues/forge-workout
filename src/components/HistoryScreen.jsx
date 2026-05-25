@@ -147,7 +147,7 @@ function WorkoutEntry({ workout, volume, sets, duration, prs, onDelete }) {
         </div>
         <div style={{ textAlign: 'right' }}>
           <p style={{ fontSize: 13, fontWeight: 700 }}>{formatDuration(duration)}</p>
-          <p className="caption">{volume}kg · {sets} sets</p>
+          <p className="caption" style={{ whiteSpace: 'nowrap' }}>{volume}kg · {sets} sets</p>
         </div>
       </div>
 
@@ -171,7 +171,7 @@ function WorkoutEntry({ workout, volume, sets, duration, prs, onDelete }) {
                     {isPR && <span className="tag tag-pr" style={{ fontSize: 10 }}>PR</span>}
                   </div>
                   {bestE1rm > 0 && (
-                    <span className="caption">{bestE1rm}kg e1RM</span>
+                    <span className="caption" style={{ whiteSpace: 'nowrap' }}>{bestE1rm}kg e1RM</span>
                   )}
                 </div>
                 <div className="row gap-8" style={{ marginTop: 6, flexWrap: 'wrap' }}>

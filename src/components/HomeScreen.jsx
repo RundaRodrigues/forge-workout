@@ -196,7 +196,7 @@ export default function HomeScreen({ history, activeWorkout, programId, onStartW
                   </div>
                   <div style={{ textAlign: 'right' }}>
                     <p style={{ fontSize: 13, fontWeight: 700 }}>{dur}min</p>
-                    <p className="caption">{vol}kg vol.</p>
+                    <p className="caption" style={{ whiteSpace: 'nowrap' }}>{vol}kg vol.</p>
                   </div>
                 </div>
               </div>
