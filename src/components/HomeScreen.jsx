@@ -12,9 +12,9 @@ function getGreeting() {
 
 const DOW_LABELS = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb']
 
-export default function HomeScreen({ history, activeWorkout, onStartWorkout, setScreen, driveSync }) {
+export default function HomeScreen({ history, activeWorkout, programId, onStartWorkout, setScreen, driveSync }) {
   const [previewDay, setPreviewDay] = useState(null)
-  const today = getTodaySchedule('lv-ppl', history)
+  const today = getTodaySchedule(programId, history)
   const isRestDay = !today
   const dow = new Date().getDay()
 

@@ -46,6 +46,51 @@ export const PROGRAMS = {
       },
     ],
   },
+
+  'lv-ppl-female': {
+    id: 'lv-ppl-female',
+    name: 'Low Volume PPL — Feminino',
+    description: 'Push / Pull / Glúteos — 3× por semana. Foco em definição e hipertrofia feminina.',
+    frequency: 3,
+    days: [
+      {
+        id: 'push',
+        name: 'Push',
+        subtitle: 'Ombro · Peito · Definição',
+        category: 'push',
+        exercises: [
+          { exerciseId: 'incline-press',  sets: 3, repRange: [10, 12] },
+          { exerciseId: 'overhead-press', sets: 3, repRange: [12, 15] },
+          { exerciseId: 'lateral-raise',  sets: 4, repRange: [15, 20] },
+          { exerciseId: 'machine-fly',    sets: 3, repRange: [12, 15] },
+        ],
+      },
+      {
+        id: 'pull',
+        name: 'Pull',
+        subtitle: 'Costas · Bíceps · Postura',
+        category: 'pull',
+        exercises: [
+          { exerciseId: 'lat-pulldown',  sets: 3, repRange: [10, 15] },
+          { exerciseId: 'barbell-row',   sets: 3, repRange: [12, 15] },
+          { exerciseId: 'face-pull',     sets: 3, repRange: [15, 20] },
+          { exerciseId: 'bicep-curl',    sets: 3, repRange: [12, 15] },
+        ],
+      },
+      {
+        id: 'legs',
+        name: 'Glúteos',
+        subtitle: 'Glúteos · Isquio · Quadríceps',
+        category: 'legs',
+        exercises: [
+          { exerciseId: 'hip-thrust',         sets: 4, repRange: [10, 15] },
+          { exerciseId: 'squat',              sets: 3, repRange: [10, 12] },
+          { exerciseId: 'romanian-deadlift',  sets: 3, repRange: [10, 12] },
+          { exerciseId: 'leg-curl',           sets: 3, repRange: [12, 15] },
+        ],
+      },
+    ],
+  },
 }
 
 /** Given a list of workout history entries, figure out what the next day should be */

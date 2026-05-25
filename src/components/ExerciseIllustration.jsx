@@ -443,6 +443,37 @@ const ILLUSTRATIONS = {
     </>
   ),
 
+  'hip-thrust': ({ acc }) => (
+    <>
+      <Floor y={174} acc={acc} />
+      {/* bench (upper back rests here) */}
+      <rect x={32} y={96} width={82} height={14} rx={4} {...E} />
+      <line x1={44} y1={110} x2={44} y2={140} {...Et} />
+      <line x1={102} y1={110} x2={102} y2={140} {...Et} />
+      {/* floor */}
+      <line x1={20} y1={168} x2={260} y2={168} {...{ ...Et, strokeOpacity: 0.3 }} />
+      {/* figure — upper back on bench, hips thrust up */}
+      <circle cx={62} cy={84} r={13} {...B} />
+      {/* torso from bench to hips (angled up) */}
+      <line x1={72} y1={92} x2={138} y2={130} {...B} />
+      {/* hips at top */}
+      <line x1={130} y1={126} x2={148} y2={126} {...B} />
+      {/* front leg: knee bent ~90°, foot flat */}
+      <polyline points="130,126 118,156 110,168" {...B} />
+      <line x1={110} y1={168} x2={92} y2={172} {...B} />
+      {/* back leg */}
+      <polyline points="148,126 162,155 170,168" {...B} />
+      <line x1={170} y1={168} x2={188} y2={172} {...B} />
+      {/* arms on bench for support */}
+      <polyline points="72,96 58,104 50,110" {...B} />
+      <polyline points="80,100 70,108 64,114" {...Bt} />
+      {/* bar across hips */}
+      <Bar x1={88} y1={122} x2={202} y2={122} />
+      <Plate x={92} y={122} acc={acc} />
+      <Plate x={198} y={122} acc={acc} />
+    </>
+  ),
+
   'calf-raise': ({ acc }) => (
     <>
       <Floor y={174} acc={acc} />
@@ -491,7 +522,7 @@ const EXERCISE_CATS = {
   'pullup': 'pull', 'barbell-row': 'pull', 'lat-pulldown': 'pull',
   'face-pull': 'pull', 'bicep-curl': 'pull',
   'squat': 'legs', 'romanian-deadlift': 'legs', 'leg-press': 'legs',
-  'leg-curl': 'legs', 'calf-raise': 'legs',
+  'leg-curl': 'legs', 'calf-raise': 'legs', 'hip-thrust': 'legs',
 }
 
 /* ── component ── */
