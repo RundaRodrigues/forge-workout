@@ -1,13 +1,14 @@
 const SCOPES = 'https://www.googleapis.com/auth/drive.file'
 const FILE_NAME = 'forge-workout-backup.json'
 const STORAGE_CLIENT_KEY = 'forge_google_client_id'
+const DEFAULT_CLIENT_ID = '803805538838-c8l1rautrqj40pl6erceluu5p9j7e222.apps.googleusercontent.com'
 
 /* ─── OAuth token (in-memory only, expires in 1h) ─── */
 let _token = null
 let _tokenClient = null
 
 export function getStoredClientId() {
-  return localStorage.getItem(STORAGE_CLIENT_KEY) ?? ''
+  return localStorage.getItem(STORAGE_CLIENT_KEY) ?? DEFAULT_CLIENT_ID
 }
 export function saveClientId(id) {
   localStorage.setItem(STORAGE_CLIENT_KEY, id.trim())
