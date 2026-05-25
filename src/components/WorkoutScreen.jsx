@@ -18,11 +18,12 @@ export default function WorkoutScreen({ activeWorkout, onUpdateWorkout, onFinish
 
   // Elapsed clock
   useEffect(() => {
+    if (!activeWorkout) return
     const id = setInterval(() => {
       setElapsed(Date.now() - activeWorkout.startTime)
     }, 1000)
     return () => clearInterval(id)
-  }, [activeWorkout.startTime])
+  }, [activeWorkout?.startTime])
 
   if (!activeWorkout) return (
     <div className="screen" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', gap: 16 }}>
