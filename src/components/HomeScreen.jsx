@@ -42,6 +42,7 @@ export default function HomeScreen({ history, activeWorkout, onStartWorkout, set
   const recentWorkouts = history.slice(-3).reverse()
 
   return (
+    <>
     <div className="screen animate-in">
       {/* Header */}
       <div style={{ paddingTop: 8 }}>
@@ -212,5 +213,6 @@ export default function HomeScreen({ history, activeWorkout, onStartWorkout, set
         onStart={(day) => { setPreviewDay(null); onStartWorkout(day) }}
       />
     )}
+    </>
   )
 }
