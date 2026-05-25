@@ -179,7 +179,8 @@ function WorkoutEntry({ workout, volume, sets, duration, prs, onDelete }) {
                     <span key={si} style={{
                       fontSize: 11, padding: '2px 8px',
                       background: 'var(--surface-3)',
-                      borderRadius: 6, color: 'var(--text-2)'
+                      borderRadius: 6, color: 'var(--text-2)',
+                      whiteSpace: 'nowrap',
                     }}>
                       {s.weight}kg × {s.reps}
                     </span>

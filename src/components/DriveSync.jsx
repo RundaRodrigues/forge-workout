@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react'
 import {
   getStoredClientId, saveClientId,
-  initGIS, requestToken, signOut,
+  initGIS, requestToken, requestTokenSilent, signOut,
   saveToDrive, loadFromDrive, getToken,
+  wasPreviouslyAuthed,
 } from '../services/googleDrive.js'
 
 const STATUS = { idle: 'idle', auth: 'auth', saving: 'saving', loading: 'loading', done: 'done', error: 'error' }
@@ -40,6 +41,9 @@ export default function DriveSync({ data, onLoad, autoSync, onManualSync }) {
         () => { setAuthed(true) },
         (err) => { setStatus(STATUS.error); setMsg(String(err)) }
       )
+      if (wasPreviouslyAuthed()) {
+        requestTokenSilent()
+      }
     }
   }, [clientId, gisReady])
 

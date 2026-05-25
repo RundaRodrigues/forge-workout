@@ -105,7 +105,7 @@ export default function WorkoutPreviewModal({ day, onClose, onStart }) {
                     </div>
                   </div>
                   <div style={{ textAlign: 'right', flexShrink: 0, marginLeft: 8 }}>
-                    <p style={{ fontSize: 15, fontWeight: 800, color: accent }}>
+                    <p style={{ fontSize: 15, fontWeight: 800, color: accent, whiteSpace: 'nowrap' }}>
                       {sets}×{repRange[0]}–{repRange[1]}
                     </p>
                     <p className="caption" style={{ fontSize: 11 }}>

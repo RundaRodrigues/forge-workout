@@ -145,7 +145,7 @@ export default function HomeScreen({ history, activeWorkout, programId, onStartW
               <div key={exerciseId} className="row gap-8" style={{ marginBottom: 8 }}>
                 <span style={{ fontSize: 16 }}>{ex.emoji}</span>
                 <span style={{ fontSize: 13, flex: 1 }}>{ex.name}</span>
-                <span className="caption">{sets}×{repRange[0]}–{repRange[1]}</span>
+                <span className="caption" style={{ whiteSpace: 'nowrap' }}>{sets}×{repRange[0]}–{repRange[1]}</span>
               </div>
             )
           })}
