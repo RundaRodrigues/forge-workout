@@ -128,7 +128,10 @@ export default function CloudSync({ data, onLoad, autoSync }) {
             position: 'fixed', inset: 0, zIndex: 300,
             background: 'rgba(7,7,15,.92)',
             backdropFilter: 'blur(12px)',
-            display: 'flex', alignItems: 'flex-end',
+            display: 'flex',
+            alignItems: user ? 'flex-end' : 'center',
+            justifyContent: 'center',
+            padding: user ? '0' : '16px',
             animation: 'fadeIn .2s ease',
           }}
           onClick={() => setOpen(false)}
@@ -136,21 +139,23 @@ export default function CloudSync({ data, onLoad, autoSync }) {
           <div
             onClick={e => e.stopPropagation()}
             style={{
-              width: '100%', maxWidth: 430, margin: '0 auto',
+              width: '100%', maxWidth: 400, margin: '0 auto',
               background: 'var(--surface)',
-              borderRadius: '24px 24px 0 0',
+              borderRadius: user ? '24px 24px 0 0' : '20px',
               border: '1px solid var(--border)',
-              padding: '20px 20px calc(24px + env(safe-area-inset-bottom))',
-              animation: 'slideUp .25s ease',
-              maxHeight: '92dvh',
+              padding: user
+                ? '20px 20px calc(24px + env(safe-area-inset-bottom))'
+                : '24px 20px',
+              animation: user ? 'slideUp .25s ease' : 'fadeIn .2s ease',
+              maxHeight: '90dvh',
               overflowY: 'auto',
             }}
           >
-            <div style={{ width: 36, height: 4, background: 'var(--border-2)', borderRadius: 2, margin: '0 auto 20px' }} />
+            {user && <div style={{ width: 36, height: 4, background: 'var(--border-2)', borderRadius: 2, margin: '0 auto 20px' }} />}
 
             <h2 className="h3" style={{ marginBottom: 4 }}>☁️ Cloud Sync</h2>
-            <p className="caption" style={{ marginBottom: 20 }}>
-              Seus treinos ficam salvos na nuvem e sincronizam entre dispositivos.
+            <p className="caption" style={{ marginBottom: 16 }}>
+              {user ? 'Seus treinos ficam salvos na nuvem e sincronizam entre dispositivos.' : 'Entre para salvar seus treinos na nuvem.'}
             </p>
 
             {!user ? (
