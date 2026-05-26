@@ -142,6 +142,8 @@ export default function CloudSync({ data, onLoad, autoSync }) {
               border: '1px solid var(--border)',
               padding: '20px 20px calc(24px + env(safe-area-inset-bottom))',
               animation: 'slideUp .25s ease',
+              maxHeight: '92dvh',
+              overflowY: 'auto',
             }}
           >
             <div style={{ width: 36, height: 4, background: 'var(--border-2)', borderRadius: 2, margin: '0 auto 20px' }} />
