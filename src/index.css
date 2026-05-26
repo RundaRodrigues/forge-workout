@@ -259,10 +259,10 @@ html, body {
   border: none;
   color: var(--text);
   font-family: inherit;
-  font-size: 24px;
+  font-size: 20px;
   font-weight: 700;
   text-align: center;
-  padding: 12px 0;
+  padding: 10px 0;
   outline: none;
   width: 0;
   min-width: 0;
@@ -274,12 +274,13 @@ html, body {
   background: none;
   border: none;
   color: var(--text-2);
-  font-size: 20px;
+  font-size: 18px;
   font-weight: 300;
-  padding: 12px 18px;
+  padding: 10px 10px;
   cursor: pointer;
   transition: color .12s;
   -webkit-tap-highlight-color: transparent;
+  flex-shrink: 0;
 }
 .input-adj:active { color: var(--orange); }
 

@@ -16,6 +16,7 @@ export default function WorkoutScreen({ activeWorkout, onUpdateWorkout, onFinish
   const [selectedExIdx, setSelectedExIdx] = useState(0)
   const [restTimer, setRestTimer] = useState(null)
   const [confirmFinish, setConfirmFinish] = useState(false)
+  const [planOpen, setPlanOpen] = useState(false)
 
   // Elapsed clock
   useEffect(() => {
@@ -37,13 +38,11 @@ export default function WorkoutScreen({ activeWorkout, onUpdateWorkout, onFinish
   const currentExercise = activeWorkout.exercises[selectedExIdx]
   const ex = EXERCISES[currentExercise.exerciseId]
 
-  // Total volume
   const totalVolume = activeWorkout.exercises.reduce((acc, e) =>
     acc + e.sets.filter(s => s.completed).reduce((a, s) => a + (s.weight * s.reps), 0), 0)
 
   function getExHistory() {
-    return history
-      .flatMap(w => w.exercises.filter(e => e.exerciseId === currentExercise.exerciseId))
+    return history.flatMap(w => w.exercises.filter(e => e.exerciseId === currentExercise.exerciseId))
   }
 
   function handleCompleteSet(setIdx) {
@@ -62,7 +61,6 @@ export default function WorkoutScreen({ activeWorkout, onUpdateWorkout, onFinish
     })
     onUpdateWorkout(updated)
 
-    // Calculate smart rest time
     const restDuration = calcRecommendedRest(ex, set.weight, set.reps, getExHistory())
     setRestTimer({ duration: restDuration, exerciseId: currentExercise.exerciseId })
   }
@@ -100,14 +98,12 @@ export default function WorkoutScreen({ activeWorkout, onUpdateWorkout, onFinish
     )
   }
 
-  // Best e1RM for current exercise from history
   const exHistory = getExHistory()
   const bestE1RM = exHistory.reduce((best, entry) => {
     const max = Math.max(...(entry.sets ?? []).map(s => calcE1RM(s.weight ?? 0, s.reps ?? 1)))
     return Math.max(best, max)
   }, 0)
 
-  // PR detection
   const currentBestE1RM = currentExercise.sets
     .filter(s => s.completed)
     .reduce((best, s) => Math.max(best, calcE1RM(s.weight, s.reps)), 0)
@@ -119,6 +115,8 @@ export default function WorkoutScreen({ activeWorkout, onUpdateWorkout, onFinish
     legs: 'var(--green)',
   }[activeWorkout.category] ?? 'var(--orange)'
 
+  const completedSets = currentExercise.sets.filter(s => s.completed).length
+
   return (
     <div style={{ height: '100%', display: 'flex', flexDirection: 'column', position: 'relative' }}>
 
@@ -128,13 +126,81 @@ export default function WorkoutScreen({ activeWorkout, onUpdateWorkout, onFinish
           <p className="label" style={{ color: 'var(--text-3)' }}>{activeWorkout.dayName}</p>
           <p className="workout-timer">{formatElapsed(elapsed)}</p>
         </div>
-        <div style={{ textAlign: 'right' }}>
-          <p className="volume-badge">{totalVolume}kg</p>
-          <p className="caption">volume total</p>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+          {/* Plan toggle */}
+          <button
+            onClick={() => setPlanOpen(o => !o)}
+            style={{
+              background: planOpen ? `${categoryColor}22` : 'var(--surface-2)',
+              border: `1px solid ${planOpen ? categoryColor : 'var(--border)'}`,
+              borderRadius: 8, padding: '5px 10px',
+              color: planOpen ? categoryColor : 'var(--text-2)',
+              fontSize: 11, fontWeight: 700,
+              fontFamily: 'inherit', cursor: 'pointer',
+              whiteSpace: 'nowrap',
+            }}
+          >
+            📋 Plano
+          </button>
+          <div style={{ textAlign: 'right' }}>
+            <p className="volume-badge">{totalVolume}kg</p>
+            <p className="caption">volume</p>
+          </div>
         </div>
       </div>
 
-      <div className="screen" style={{ paddingTop: 16 }}>
+      {/* Plan overview dropdown */}
+      {planOpen && (
+        <div style={{
+          background: 'var(--surface)',
+          borderBottom: '1px solid var(--border)',
+          padding: '10px 16px 14px',
+        }}>
+          {activeWorkout.exercises.map((e, i) => {
+            const exInfo = EXERCISES[e.exerciseId]
+            const done = e.sets.filter(s => s.completed).length >= e.plannedSets
+            const isSelected = i === selectedExIdx
+            return (
+              <button
+                key={i}
+                onClick={() => { setSelectedExIdx(i); setPlanOpen(false) }}
+                style={{
+                  display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                  width: '100%', padding: '8px 10px', marginBottom: 4,
+                  borderRadius: 10,
+                  background: isSelected ? `${categoryColor}18` : done ? 'rgba(6,214,160,.06)' : 'var(--surface-2)',
+                  border: `1px solid ${isSelected ? categoryColor : done ? 'rgba(6,214,160,.25)' : 'var(--border)'}`,
+                  cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left',
+                }}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <span style={{ fontSize: 16 }}>{exInfo.emoji}</span>
+                  <div>
+                    <p style={{
+                      fontSize: 13, fontWeight: 600,
+                      color: isSelected ? categoryColor : done ? 'var(--green)' : 'var(--text)',
+                      textDecoration: done ? 'line-through' : 'none',
+                    }}>
+                      {exInfo.name}
+                    </p>
+                    <p className="caption" style={{ fontSize: 11 }}>
+                      {e.plannedSets} sets · {e.repRange[0]}–{e.repRange[1]} reps
+                    </p>
+                  </div>
+                </div>
+                <span style={{
+                  fontSize: 11, fontWeight: 700,
+                  color: done ? 'var(--green)' : isSelected ? categoryColor : 'var(--text-3)',
+                }}>
+                  {done ? '✓' : `${e.sets.filter(s => s.completed).length}/${e.plannedSets}`}
+                </span>
+              </button>
+            )
+          })}
+        </div>
+      )}
+
+      <div className="screen" style={{ paddingTop: 14 }}>
 
         {/* Illustration */}
         <div className="illustration-wrap">
@@ -151,7 +217,7 @@ export default function WorkoutScreen({ activeWorkout, onUpdateWorkout, onFinish
         </div>
 
         {/* Exercise tabs */}
-        <div style={{ display: 'flex', gap: 6, marginTop: 14, overflowX: 'auto', paddingBottom: 4 }}>
+        <div style={{ display: 'flex', gap: 6, marginTop: 12, overflowX: 'auto', paddingBottom: 4 }}>
           {activeWorkout.exercises.map((e, i) => {
             const exInfo = EXERCISES[e.exerciseId]
             const done = e.sets.filter(s => s.completed).length >= e.plannedSets
@@ -161,17 +227,16 @@ export default function WorkoutScreen({ activeWorkout, onUpdateWorkout, onFinish
                 onClick={() => setSelectedExIdx(i)}
                 style={{
                   flexShrink: 0,
-                  padding: '6px 12px',
+                  padding: '5px 12px',
                   borderRadius: 999,
                   border: `1.5px solid ${i === selectedExIdx ? categoryColor : 'var(--border)'}`,
                   background: i === selectedExIdx ? `${categoryColor}22` : 'var(--surface)',
-                  color: i === selectedExIdx ? categoryColor : (done ? 'var(--text-3)' : 'var(--text-2)'),
-                  fontSize: 12,
+                  color: i === selectedExIdx ? categoryColor : (done ? 'var(--green)' : 'var(--text-2)'),
+                  fontSize: 11,
                   fontWeight: 600,
                   cursor: 'pointer',
                   fontFamily: 'inherit',
-                  textDecoration: done ? 'line-through' : 'none',
-                  opacity: done && i !== selectedExIdx ? .5 : 1,
+                  opacity: done && i !== selectedExIdx ? .6 : 1,
                 }}
               >
                 {done ? '✓ ' : ''}{exInfo.name}
@@ -180,26 +245,74 @@ export default function WorkoutScreen({ activeWorkout, onUpdateWorkout, onFinish
           })}
         </div>
 
-        {/* Current exercise detail */}
+        {/* Exercise card */}
         <div className="card mt-12">
-          <div className="row-between mb-12">
-            <div>
+
+          {/* Header: name + progress */}
+          <div className="row-between mb-8">
+            <div style={{ flex: 1, minWidth: 0 }}>
               <div className="row gap-8">
-                <h2 className="h3">{ex.name}</h2>
-                {isPR && <span className="tag tag-pr">PR</span>}
+                <h2 className="h3" style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                  {ex.name}
+                </h2>
+                {isPR && <span className="tag tag-pr" style={{ flexShrink: 0 }}>PR</span>}
               </div>
-              <p className="caption mt-8">{ex.muscles.join(' · ')}</p>
+              <p className="caption" style={{ marginTop: 4 }}>{ex.muscles.join(' · ')}</p>
             </div>
-            <div style={{ textAlign: 'right' }}>
+            <div style={{ textAlign: 'right', flexShrink: 0, marginLeft: 10 }}>
               <span className={`tag tag-${ex.category}`}>{ex.category}</span>
-              <p className="caption mt-8">
-                {currentExercise.sets.filter(s => s.completed).length}/{currentExercise.plannedSets} sets
-              </p>
+            </div>
+          </div>
+
+          {/* Target + history row */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', marginBottom: 12 }}>
+            <div style={{
+              display: 'flex', alignItems: 'center', gap: 5,
+              background: `${categoryColor}15`,
+              border: `1px solid ${categoryColor}40`,
+              borderRadius: 999, padding: '4px 12px',
+            }}>
+              <span style={{ fontSize: 11 }}>🎯</span>
+              <span style={{ fontSize: 12, fontWeight: 700, color: categoryColor, whiteSpace: 'nowrap' }}>
+                {currentExercise.plannedSets} sets · {currentExercise.repRange[0]}–{currentExercise.repRange[1]} reps
+              </span>
+            </div>
+            {bestE1RM > 0 && (
+              <div style={{
+                display: 'flex', alignItems: 'center', gap: 5,
+                background: 'var(--surface-2)',
+                border: '1px solid var(--border)',
+                borderRadius: 999, padding: '4px 12px',
+              }}>
+                <span style={{ fontSize: 11 }}>🏆</span>
+                <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-2)', whiteSpace: 'nowrap' }}>
+                  {bestE1RM}kg e1RM
+                </span>
+              </div>
+            )}
+          </div>
+
+          {/* Progress bar */}
+          <div style={{ marginBottom: 12 }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 5 }}>
+              <span className="caption" style={{ fontSize: 11 }}>Progresso</span>
+              <span className="caption" style={{ fontSize: 11, fontWeight: 700 }}>
+                {completedSets} / {currentExercise.plannedSets} sets
+              </span>
+            </div>
+            <div style={{ height: 4, background: 'var(--surface-3)', borderRadius: 999, overflow: 'hidden' }}>
+              <div style={{
+                height: '100%',
+                width: `${Math.min(100, (completedSets / currentExercise.plannedSets) * 100)}%`,
+                background: `linear-gradient(90deg, ${categoryColor}, ${categoryColor}99)`,
+                borderRadius: 999,
+                transition: 'width .4s ease',
+              }} />
             </div>
           </div>
 
           {/* Cues */}
-          <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 14 }}>
+          <div style={{ display: 'flex', gap: 5, flexWrap: 'wrap', marginBottom: 12 }}>
             {ex.cues.map((c, i) => (
               <span key={i} style={{
                 fontSize: 11, padding: '3px 8px',
@@ -214,7 +327,7 @@ export default function WorkoutScreen({ activeWorkout, onUpdateWorkout, onFinish
           <div className="sep" />
 
           {/* Sets header */}
-          <div style={{ display: 'grid', gridTemplateColumns: '28px 1fr 1fr 40px', gap: 8, padding: '6px 0', marginBottom: 4 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '28px 1fr 1fr 40px', gap: 8, padding: '6px 0', marginBottom: 2 }}>
             <span className="label text-center">SET</span>
             <span className="label text-center">KG</span>
             <span className="label text-center">REPS</span>
@@ -228,6 +341,8 @@ export default function WorkoutScreen({ activeWorkout, onUpdateWorkout, onFinish
               setNum={si + 1}
               set={set}
               repRange={ex.repRange}
+              isPlanned={si < currentExercise.plannedSets}
+              categoryColor={categoryColor}
               onWeightChange={v => handleUpdateSet(si, 'weight', v)}
               onRepsChange={v => handleUpdateSet(si, 'reps', v)}
               onComplete={() => handleCompleteSet(si)}
@@ -239,7 +354,7 @@ export default function WorkoutScreen({ activeWorkout, onUpdateWorkout, onFinish
             style={{ fontSize: 13 }}
             onClick={addSet}
           >
-            + Adicionar set
+            + Set extra
           </button>
         </div>
 
@@ -248,9 +363,9 @@ export default function WorkoutScreen({ activeWorkout, onUpdateWorkout, onFinish
           <span style={{ fontSize: 20 }}>⏱</span>
           <div>
             <p style={{ fontSize: 13, fontWeight: 600 }}>
-              Descanso recomendado: {Math.round(ex.rest.recommended / 60)}–{Math.round(ex.rest.max / 60)} min
+              Descanso: {Math.round(ex.rest.recommended / 60)}–{Math.round(ex.rest.max / 60)} min
             </p>
-            <p className="caption">Ajustado pela intensidade do set</p>
+            <p className="caption">Ajustado pela intensidade</p>
           </div>
         </div>
 
@@ -303,27 +418,37 @@ export default function WorkoutScreen({ activeWorkout, onUpdateWorkout, onFinish
   )
 }
 
-function SetRow({ setNum, set, repRange, onWeightChange, onRepsChange, onComplete }) {
+function SetRow({ setNum, set, repRange, isPlanned, categoryColor, onWeightChange, onRepsChange, onComplete }) {
   return (
-    <div className="set-row">
-      <span className="set-num">{setNum}</span>
+    <div className="set-row" style={{
+      opacity: set.completed ? 0.6 : 1,
+      background: set.completed ? 'rgba(6,214,160,.04)' : 'transparent',
+    }}>
+      <span className="set-num" style={{
+        color: isPlanned ? 'var(--text-2)' : 'var(--text-3)',
+      }}>
+        {setNum}
+      </span>
 
       {/* Weight */}
-      <div className="input-group">
+      <div className="input-group" style={{
+        borderColor: set.completed ? 'rgba(6,214,160,.3)' : undefined,
+      }}>
         <button className="input-adj" onClick={() => onWeightChange(Math.max(0, (set.weight || 0) - 2.5))}>−</button>
         <input
           type="number"
           value={set.weight || ''}
           onChange={e => onWeightChange(parseFloat(e.target.value) || 0)}
-          placeholder="kg"
+          placeholder="0"
           disabled={set.completed}
-          style={{ opacity: set.completed ? .5 : 1 }}
         />
         <button className="input-adj" onClick={() => onWeightChange((set.weight || 0) + 2.5)}>+</button>
       </div>
 
-      {/* Reps */}
-      <div className="input-group">
+      {/* Reps — show target range as placeholder */}
+      <div className="input-group" style={{
+        borderColor: set.completed ? 'rgba(6,214,160,.3)' : undefined,
+      }}>
         <button className="input-adj" onClick={() => onRepsChange(Math.max(1, (set.reps || repRange[0]) - 1))}>−</button>
         <input
           type="number"
@@ -331,7 +456,6 @@ function SetRow({ setNum, set, repRange, onWeightChange, onRepsChange, onComplet
           onChange={e => onRepsChange(parseInt(e.target.value) || 0)}
           placeholder={`${repRange[0]}`}
           disabled={set.completed}
-          style={{ opacity: set.completed ? .5 : 1 }}
         />
         <button className="input-adj" onClick={() => onRepsChange((set.reps || repRange[0]) + 1)}>+</button>
       </div>
