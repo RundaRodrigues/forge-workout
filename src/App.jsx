@@ -4,10 +4,10 @@ import HomeScreen from './components/HomeScreen.jsx'
 import WorkoutScreen from './components/WorkoutScreen.jsx'
 import HistoryScreen from './components/HistoryScreen.jsx'
 import ProgramsScreen from './components/ProgramsScreen.jsx'
-import DriveSync from './components/DriveSync.jsx'
+import CloudSync from './components/CloudSync.jsx'
 import GenderSelectScreen from './components/GenderSelectScreen.jsx'
 import { EXERCISES } from './data/exercises.js'
-import { saveToDrive, getToken } from './services/googleDrive.js'
+import { saveToCloud, getSession } from './services/supabase.js'
 
 const STORAGE_KEY = 'forge_data_v1'
 
@@ -32,7 +32,7 @@ export default function App() {
   const [history, setHistory] = useState([])
   const [activeWorkout, setActiveWorkout] = useState(null)
   const [gender, setGender] = useState(null)
-  const [driveSync, setDriveSync] = useState({ state: 'idle', time: null })
+  const [cloudSync, setCloudSync] = useState({ state: 'idle', time: null })
   // 'idle' | 'syncing' | 'done' | 'error'
 
   useEffect(() => {
@@ -50,15 +50,16 @@ export default function App() {
 
   const programId = gender === 'female' ? 'lv-ppl-female' : 'lv-ppl'
 
-  /* ── Auto-sync to Drive ──────────────────────────────── */
+  /* ── Auto-sync to Supabase ───────────────────────────── */
   const autoSync = useCallback(async (data) => {
-    if (!getToken()) return   // not authenticated — skip silently
-    setDriveSync({ state: 'syncing', time: null })
+    const session = await getSession()
+    if (!session) return   // not authenticated — skip silently
+    setCloudSync({ state: 'syncing', time: null })
     try {
-      await saveToDrive(data)
-      setDriveSync({ state: 'done', time: Date.now() })
+      await saveToCloud(data)
+      setCloudSync({ state: 'done', time: Date.now() })
     } catch {
-      setDriveSync({ state: 'error', time: null })
+      setCloudSync({ state: 'error', time: null })
     }
   }, [])
 
@@ -111,7 +112,7 @@ export default function App() {
     autoSync({ history: newHistory, activeWorkout, gender })
   }
 
-  function handleDriveLoad(loaded) {
+  function handleCloudLoad(loaded) {
     if (loaded.history) setHistory(loaded.history)
     if (loaded.activeWorkout !== undefined) setActiveWorkout(loaded.activeWorkout)
     if (loaded.gender) setGender(loaded.gender)
@@ -121,7 +122,7 @@ export default function App() {
     return <GenderSelectScreen onSelect={handleGenderSelect} />
   }
 
-  const driveData = { history, activeWorkout, gender }
+  const cloudData = { history, activeWorkout, gender }
 
   function renderScreen() {
     switch (screen) {
@@ -134,11 +135,10 @@ export default function App() {
             onStartWorkout={startWorkout}
             setScreen={setScreen}
             driveSync={
-              <DriveSync
-                data={driveData}
-                onLoad={handleDriveLoad}
-                autoSync={driveSync}
-                onManualSync={() => setDriveSync({ state: 'idle', time: null })}
+              <CloudSync
+                data={cloudData}
+                onLoad={handleCloudLoad}
+                autoSync={cloudSync}
               />
             }
           />
