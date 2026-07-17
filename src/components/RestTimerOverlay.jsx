@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect } from 'react'
 
 const CIRCUMFERENCE = 2 * Math.PI * 90 // r=90
 
@@ -8,53 +8,44 @@ function formatTime(s) {
   return `${m}:${String(sec).padStart(2, '0')}`
 }
 
-export default function RestTimerOverlay({ duration, exerciseName, onDone, onSkip }) {
-  const [remaining, setRemaining] = useState(duration)
-  const [total, setTotal] = useState(duration)
-  const startRef = useRef(Date.now())
-  const totalRef = useRef(duration)
+function getRemaining(duration, startedAt) {
+  const elapsed = Math.floor((Date.now() - startedAt) / 1000)
+  return Math.max(0, duration - elapsed)
+}
+
+export default function RestTimerOverlay({
+  duration,
+  startedAt,
+  exerciseName,
+  onAddTime,
+  onMinimize,
+  onSkip,
+}) {
+  const [remaining, setRemaining] = useState(() => getRemaining(duration, startedAt))
 
   useEffect(() => {
-    startRef.current = Date.now()
-    totalRef.current = duration
-    setRemaining(duration)
-    setTotal(duration)
-  }, [duration])
-
-  useEffect(() => {
-    const id = setInterval(() => {
-      const elapsed = Math.floor((Date.now() - startRef.current) / 1000)
-      const left = Math.max(0, totalRef.current - elapsed)
-      setRemaining(left)
-      if (left === 0) {
-        clearInterval(id)
-        // vibrate if supported
-        if ('vibrate' in navigator) navigator.vibrate([100, 50, 100])
-        setTimeout(onDone, 600)
-      }
-    }, 250)
+    const id = setInterval(() => setRemaining(getRemaining(duration, startedAt)), 250)
     return () => clearInterval(id)
-  }, [onDone])
+  }, [duration, startedAt])
 
-  function addTime(s) {
-    totalRef.current += s
-    setTotal(t => t + s)
-  }
-
-  const progress = remaining / total
+  const progress = duration > 0 ? remaining / duration : 0
   const dash = CIRCUMFERENCE * (1 - progress)
 
   const readyMessages = [
-    'Foco total — último set!',
+    'Foco total - ultimo set!',
     'Descansou, agora vai!',
     'Respira fundo e vai forte!',
     'Energia renovada!',
-    'Mantém a intensidade!',
+    'Mantem a intensidade!',
   ]
   const readyMsg = readyMessages[Math.floor(Date.now() / 1000) % readyMessages.length]
 
   return (
     <div className="rest-overlay animate-in">
+      <button className="rest-minimize" onClick={onMinimize}>
+        Minimizar
+      </button>
+
       <p className="label" style={{ color: 'var(--text-3)', letterSpacing: '2px' }}>
         DESCANSO
       </p>
@@ -95,7 +86,7 @@ export default function RestTimerOverlay({ duration, exerciseName, onDone, onSki
             {formatTime(remaining)}
           </span>
           <span className="rest-label-sm">
-            {remaining === 0 ? '🔥 VAI!' : 'restante'}
+            {remaining === 0 ? 'VAI!' : 'restante'}
           </span>
         </div>
       </div>
@@ -104,7 +95,6 @@ export default function RestTimerOverlay({ duration, exerciseName, onDone, onSki
         className="rest-recommended"
         title="Descanso calculado com base na intensidade do set"
       >
-        <span>🧠</span>
         <span>Ideal: {formatTime(duration)}</span>
       </div>
 
@@ -118,7 +108,7 @@ export default function RestTimerOverlay({ duration, exerciseName, onDone, onSki
       )}
 
       <div className="rest-actions" style={{ marginTop: 24 }}>
-        <button className="btn btn-ghost" onClick={() => addTime(30)}>
+        <button className="btn btn-ghost" onClick={() => onAddTime(30)}>
           +30s
         </button>
         <button
@@ -126,7 +116,7 @@ export default function RestTimerOverlay({ duration, exerciseName, onDone, onSki
           style={{ minWidth: 120 }}
           onClick={onSkip}
         >
-          {remaining === 0 ? 'Continuar' : 'Pular ⏭'}
+          {remaining === 0 ? 'Continuar' : 'Pular'}
         </button>
       </div>
     </div>

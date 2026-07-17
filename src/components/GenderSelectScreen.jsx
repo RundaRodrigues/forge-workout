@@ -30,7 +30,7 @@ export default function GenderSelectScreen({ onSelect }) {
     <div style={{
       height: '100%', display: 'flex', flexDirection: 'column',
       alignItems: 'center', justifyContent: 'center',
-      padding: '0 20px',
+      padding: 'calc(var(--safe-t) + 20px) 20px calc(var(--safe-b) + 20px)',
       background: 'var(--bg)',
     }}>
 

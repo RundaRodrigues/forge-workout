@@ -30,7 +30,16 @@ export default function CloudSync({ data, onLoad, autoSync }) {
   useEffect(() => {
     if (!user) return
     loadFromCloud()
-      .then(loaded => { if (loaded) onLoad(loaded) })
+      .then(loaded => {
+        if (!loaded) return
+        const hasLocalData = !!data?.activeWorkout || !!data?.gender || (data?.history?.length ?? 0) > 0
+        if (!hasLocalData) {
+          onLoad(loaded)
+          return
+        }
+        setStatus('done')
+        setMsg('Backup encontrado. Use "Restaurar da nuvem" para substituir os dados deste aparelho.')
+      })
       .catch(() => {})
   }, [user?.id])
 

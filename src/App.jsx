@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import Navigation from './components/Navigation.jsx'
 import HomeScreen from './components/HomeScreen.jsx'
 import WorkoutScreen from './components/WorkoutScreen.jsx'
@@ -6,6 +6,7 @@ import HistoryScreen from './components/HistoryScreen.jsx'
 import ProgramsScreen from './components/ProgramsScreen.jsx'
 import CloudSync from './components/CloudSync.jsx'
 import GenderSelectScreen from './components/GenderSelectScreen.jsx'
+import RestTimerOverlay from './components/RestTimerOverlay.jsx'
 import { EXERCISES } from './data/exercises.js'
 import { saveToCloud, getSession } from './services/supabase.js'
 
@@ -27,12 +28,26 @@ function saveData(data) {
   } catch { /* storage full */ }
 }
 
+function formatRestTime(s) {
+  const m = Math.floor(s / 60)
+  const sec = s % 60
+  return `${m}:${String(sec).padStart(2, '0')}`
+}
+
+function getRestRemaining(timer) {
+  if (!timer) return 0
+  const elapsed = Math.floor((Date.now() - timer.startedAt) / 1000)
+  return Math.max(0, timer.duration - elapsed)
+}
+
 export default function App() {
   const [screen, setScreen] = useState('home')
   const [history, setHistory] = useState([])
   const [activeWorkout, setActiveWorkout] = useState(null)
   const [gender, setGender] = useState(null)
   const [cloudSync, setCloudSync] = useState({ state: 'idle', time: null })
+  const [restTimer, setRestTimer] = useState(null)
+  const hydratedRef = useRef(false)
   // 'idle' | 'syncing' | 'done' | 'error'
 
   useEffect(() => {
@@ -42,11 +57,6 @@ export default function App() {
     setGender(data.gender ?? null)
     if (data.activeWorkout) setScreen('workout')
   }, [])
-
-  useEffect(() => {
-    if (gender === null) return
-    saveData({ history, activeWorkout, gender })
-  }, [history, activeWorkout, gender])
 
   const programId = gender === 'female' ? 'lv-ppl-female' : 'lv-ppl'
 
@@ -63,7 +73,50 @@ export default function App() {
     }
   }, [])
 
+  useEffect(() => {
+    if (gender === null) return
+    saveData({ history, activeWorkout, gender })
+
+    if (!hydratedRef.current) {
+      hydratedRef.current = true
+      return
+    }
+
+    const id = setTimeout(() => {
+      autoSync({ history, activeWorkout, gender })
+    }, 1200)
+    return () => clearTimeout(id)
+  }, [history, activeWorkout, gender, autoSync])
+
+  useEffect(() => {
+    if (!restTimer) return
+    const id = setInterval(() => {
+      if (getRestRemaining(restTimer) > 0) return
+      if ('vibrate' in navigator) navigator.vibrate([100, 50, 100])
+      setRestTimer(null)
+    }, 250)
+    return () => clearInterval(id)
+  }, [restTimer])
+
   /* ── Actions ─────────────────────────────────────────── */
+  const navigate = useCallback((nextScreen) => {
+    setRestTimer(timer => timer ? { ...timer, minimized: true } : timer)
+    setScreen(nextScreen)
+  }, [])
+
+  function startRestTimer(duration, exerciseName) {
+    setRestTimer({
+      duration,
+      exerciseName,
+      startedAt: Date.now(),
+      minimized: false,
+    })
+  }
+
+  function addRestTime(seconds) {
+    setRestTimer(timer => timer ? { ...timer, duration: timer.duration + seconds } : timer)
+  }
+
   function handleGenderSelect(g) {
     setGender(g)
     saveData({ history, activeWorkout, gender: g })
@@ -89,7 +142,7 @@ export default function App() {
       })),
     }
     setActiveWorkout(workout)
-    setScreen('workout')
+    navigate('workout')
   }
 
   function updateWorkout(updated) {
@@ -102,14 +155,13 @@ export default function App() {
     const newHistory = [...history, finished]
     setHistory(newHistory)
     setActiveWorkout(null)
+    setRestTimer(null)
     setScreen('history')
-    autoSync({ history: newHistory, activeWorkout: null, gender })
   }
 
   function deleteWorkout(startTime) {
     const newHistory = history.filter(w => w.startTime !== startTime)
     setHistory(newHistory)
-    autoSync({ history: newHistory, activeWorkout, gender })
   }
 
   function handleCloudLoad(loaded) {
@@ -133,7 +185,7 @@ export default function App() {
             activeWorkout={activeWorkout}
             programId={programId}
             onStartWorkout={startWorkout}
-            setScreen={setScreen}
+            setScreen={navigate}
             driveSync={
               <CloudSync
                 data={cloudData}
@@ -150,6 +202,7 @@ export default function App() {
             onUpdateWorkout={updateWorkout}
             onFinishWorkout={finishWorkout}
             history={history}
+            onStartRest={startRestTimer}
           />
         )
       case 'history':
@@ -171,7 +224,46 @@ export default function App() {
   return (
     <>
       {renderScreen()}
-      <Navigation screen={screen} setScreen={setScreen} hasActiveWorkout={!!activeWorkout} />
+      {restTimer && restTimer.minimized && (
+        <RestTimerChip
+          timer={restTimer}
+          onExpand={() => setRestTimer(timer => timer ? { ...timer, minimized: false } : timer)}
+          onSkip={() => setRestTimer(null)}
+        />
+      )}
+      {restTimer && !restTimer.minimized && (
+        <RestTimerOverlay
+          duration={restTimer.duration}
+          startedAt={restTimer.startedAt}
+          exerciseName={restTimer.exerciseName}
+          onAddTime={addRestTime}
+          onMinimize={() => setRestTimer(timer => timer ? { ...timer, minimized: true } : timer)}
+          onSkip={() => setRestTimer(null)}
+        />
+      )}
+      <Navigation screen={screen} setScreen={navigate} hasActiveWorkout={!!activeWorkout} />
     </>
+  )
+}
+
+function RestTimerChip({ timer, onExpand, onSkip }) {
+  const [remaining, setRemaining] = useState(() => getRestRemaining(timer))
+
+  useEffect(() => {
+    const id = setInterval(() => setRemaining(getRestRemaining(timer)), 250)
+    return () => clearInterval(id)
+  }, [timer])
+
+  return (
+    <div className="rest-chip" role="status" aria-live="polite">
+      <button className="rest-chip-main" onClick={onExpand}>
+        <span className="rest-chip-label">Descanso</span>
+        <span className="rest-chip-name">{timer.exerciseName}</span>
+        <span className="rest-chip-time">{formatRestTime(remaining)}</span>
+      </button>
+      <button className="rest-chip-skip" onClick={onSkip} aria-label="Encerrar descanso">
+        Pular
+      </button>
+    </div>
   )
 }

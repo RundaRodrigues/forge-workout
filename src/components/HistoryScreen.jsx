@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { EXERCISES, calcE1RM } from '../data/exercises.js'
 
 function formatDate(ts) {
@@ -29,14 +30,20 @@ export default function HistoryScreen({ history, onDelete }) {
 
   // Calculate PRs across all history
   const prs = {}
+  const prByWorkout = {}
+  const runningPrs = {}
   history.forEach(w => {
+    prByWorkout[w.startTime] = {}
     w.exercises.forEach(e => {
-      e.sets.filter(s => s.completed).forEach(s => {
-        const e1rm = calcE1RM(s.weight, s.reps)
-        if (!prs[e.exerciseId] || e1rm > prs[e.exerciseId]) {
-          prs[e.exerciseId] = e1rm
-        }
-      })
+      const bestInWorkout = e.sets
+        .filter(s => s.completed)
+        .reduce((best, s) => Math.max(best, calcE1RM(s.weight, s.reps)), 0)
+
+      if (bestInWorkout > (runningPrs[e.exerciseId] ?? 0)) {
+        prByWorkout[w.startTime][e.exerciseId] = true
+        runningPrs[e.exerciseId] = bestInWorkout
+      }
+      prs[e.exerciseId] = Math.max(prs[e.exerciseId] ?? 0, bestInWorkout)
     })
   })
 
@@ -113,14 +120,14 @@ export default function HistoryScreen({ history, onDelete }) {
         const dur = w.endTime - w.startTime
 
         return (
-          <WorkoutEntry key={w.startTime} workout={w} volume={vol} sets={sets} duration={dur} prs={prs} history={history.slice(0, history.length - i - 1)} onDelete={onDelete} />
+          <WorkoutEntry key={w.startTime} workout={w} volume={vol} sets={sets} duration={dur} prExercises={prByWorkout[w.startTime] ?? {}} onDelete={onDelete} />
         )
       })}
     </div>
   )
 }
 
-function WorkoutEntry({ workout, volume, sets, duration, prs, onDelete }) {
+function WorkoutEntry({ workout, volume, sets, duration, prExercises, onDelete }) {
   const [expanded, setExpanded] = useState(false)
   const [confirming, setConfirming] = useState(false)
 
@@ -160,7 +167,7 @@ function WorkoutEntry({ workout, volume, sets, duration, prs, onDelete }) {
             const completedSets = e.sets.filter(s => s.completed)
             const bestE1rm = completedSets.reduce((best, s) =>
               Math.max(best, calcE1RM(s.weight, s.reps)), 0)
-            const isPR = prs[e.exerciseId] === bestE1rm && bestE1rm > 0
+            const isPR = !!prExercises[e.exerciseId] && bestE1rm > 0
 
             return (
               <div key={i} style={{ padding: '8px 0', borderBottom: '1px solid var(--border)' }}>
@@ -221,5 +228,3 @@ function WorkoutEntry({ workout, volume, sets, duration, prs, onDelete }) {
   )
 }
 
-// Need useState in WorkoutEntry
-import { useState } from 'react'

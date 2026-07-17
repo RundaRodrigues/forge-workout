@@ -50,6 +50,7 @@ html, body {
 #root {
   height: 100%;
   height: 100dvh;
+  height: 100svh;
   display: flex;
   flex-direction: column;
   max-width: 430px;
@@ -330,9 +331,15 @@ html, body {
 
 /* ─── Rest Timer Overlay ─────────────────────────────────── */
 .rest-overlay {
-  position: absolute;
-  inset: 0;
-  z-index: 200;
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: calc(var(--nav-h) + var(--safe-b));
+  width: 100%;
+  max-width: 430px;
+  margin: 0 auto;
+  z-index: 90;
   background: rgba(7,7,15,.96);
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
@@ -342,6 +349,82 @@ html, body {
   justify-content: center;
   gap: 0;
   animation: fadeIn .25s ease;
+}
+.rest-minimize {
+  position: absolute;
+  top: calc(var(--safe-t) + 14px);
+  right: 16px;
+  background: var(--surface-2);
+  border: 1px solid var(--border-2);
+  color: var(--text-2);
+  border-radius: 999px;
+  padding: 8px 12px;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.rest-chip {
+  position: fixed;
+  top: calc(var(--safe-t) + 10px);
+  left: 50%;
+  transform: translateX(-50%);
+  width: calc(100% - 24px);
+  max-width: 406px;
+  z-index: 120;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px;
+  background: rgba(15,15,28,.96);
+  border: 1px solid rgba(255,122,26,.35);
+  border-radius: var(--r-md);
+  box-shadow: 0 10px 30px rgba(0,0,0,.35);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+}
+.rest-chip-main {
+  flex: 1;
+  min-width: 0;
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 8px;
+  background: transparent;
+  border: none;
+  color: var(--text);
+  font-family: inherit;
+  cursor: pointer;
+}
+.rest-chip-label {
+  color: var(--orange);
+  font-size: 11px;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+.rest-chip-name {
+  color: var(--text-2);
+  font-size: 12px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.rest-chip-time {
+  font-size: 18px;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  color: var(--text);
+}
+.rest-chip-skip {
+  flex-shrink: 0;
+  background: var(--surface-2);
+  border: 1px solid var(--border-2);
+  color: var(--text-2);
+  border-radius: 999px;
+  padding: 8px 10px;
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
 }
 .rest-ring-wrap {
   position: relative;
@@ -533,7 +616,7 @@ html, body {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 14px 16px;
+  padding: calc(var(--safe-t) + 14px) 16px 14px;
   background: var(--surface);
   border-bottom: 1px solid var(--border);
   position: sticky;

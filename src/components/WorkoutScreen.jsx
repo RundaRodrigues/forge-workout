@@ -1,7 +1,5 @@
 import { useState, useEffect } from 'react'
 import { EXERCISES, calcRecommendedRest, calcE1RM } from '../data/exercises.js'
-import ExerciseIllustration from './ExerciseIllustration.jsx'
-import RestTimerOverlay from './RestTimerOverlay.jsx'
 
 function formatElapsed(ms) {
   const s = Math.floor(ms / 1000)
@@ -11,10 +9,9 @@ function formatElapsed(ms) {
   return `${m}:${String(s % 60).padStart(2, '0')}`
 }
 
-export default function WorkoutScreen({ activeWorkout, onUpdateWorkout, onFinishWorkout, history }) {
+export default function WorkoutScreen({ activeWorkout, onUpdateWorkout, onFinishWorkout, history, onStartRest }) {
   const [elapsed, setElapsed] = useState(0)
   const [selectedExIdx, setSelectedExIdx] = useState(0)
-  const [restTimer, setRestTimer] = useState(null)
   const [confirmFinish, setConfirmFinish] = useState(false)
   const [planOpen, setPlanOpen] = useState(false)
 
@@ -62,7 +59,7 @@ export default function WorkoutScreen({ activeWorkout, onUpdateWorkout, onFinish
     onUpdateWorkout(updated)
 
     const restDuration = calcRecommendedRest(ex, set.weight, set.reps, getExHistory())
-    setRestTimer({ duration: restDuration, exerciseId: currentExercise.exerciseId })
+    onStartRest(restDuration, ex.name)
   }
 
   function handleUpdateSet(setIdx, field, value) {
@@ -202,22 +199,8 @@ export default function WorkoutScreen({ activeWorkout, onUpdateWorkout, onFinish
 
       <div className="screen" style={{ paddingTop: 14 }}>
 
-        {/* Illustration */}
-        <div className="illustration-wrap">
-          <ExerciseIllustration exerciseId={currentExercise.exerciseId} />
-          {isPR && (
-            <div style={{
-              position: 'absolute', top: 10, right: 10,
-              background: 'linear-gradient(135deg,rgba(255,215,0,.9),rgba(255,165,0,.9))',
-              borderRadius: 8, padding: '4px 10px', fontSize: 12, fontWeight: 800, color: '#000'
-            }}>
-              🏆 PR!
-            </div>
-          )}
-        </div>
-
         {/* Exercise tabs */}
-        <div style={{ display: 'flex', gap: 6, marginTop: 12, overflowX: 'auto', paddingBottom: 4 }}>
+        <div style={{ display: 'flex', gap: 6, overflowX: 'auto', paddingBottom: 4 }}>
           {activeWorkout.exercises.map((e, i) => {
             const exInfo = EXERCISES[e.exerciseId]
             const done = e.sets.filter(s => s.completed).length >= e.plannedSets
@@ -405,15 +388,6 @@ export default function WorkoutScreen({ activeWorkout, onUpdateWorkout, onFinish
         </div>
       </div>
 
-      {/* Rest timer overlay */}
-      {restTimer && (
-        <RestTimerOverlay
-          duration={restTimer.duration}
-          exerciseName={ex.name}
-          onDone={() => setRestTimer(null)}
-          onSkip={() => setRestTimer(null)}
-        />
-      )}
     </div>
   )
 }
@@ -466,6 +440,7 @@ function SetRow({ setNum, set, repRange, isPlanned, categoryColor, onWeightChang
         onClick={onComplete}
         disabled={set.completed || !set.weight || !set.reps}
         style={{ opacity: !set.weight || !set.reps ? .3 : 1 }}
+        aria-label={`Concluir set ${setNum}`}
       >
         {set.completed ? '✓' : ''}
       </button>
