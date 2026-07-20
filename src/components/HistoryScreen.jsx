@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { EXERCISES, calcE1RM } from '../data/exercises.js'
 
 function formatDate(ts) {
@@ -13,7 +13,37 @@ function formatDuration(ms) {
   return `${m}min`
 }
 
+function getPeriodStart(period) {
+  const start = new Date()
+  start.setHours(0, 0, 0, 0)
+
+  if (period === 'week') {
+    start.setDate(start.getDate() - 6)
+    return start
+  }
+
+  if (period === 'month') {
+    start.setMonth(start.getMonth() - 1)
+    return start
+  }
+
+  return null
+}
+
+const PERIODS = [
+  { id: 'week', label: 'Semana' },
+  { id: 'month', label: 'Mês' },
+  { id: 'all', label: 'Tudo' },
+]
+
 export default function HistoryScreen({ history, onDelete }) {
+  const [period, setPeriod] = useState('month')
+  const filteredHistory = useMemo(() => {
+    const start = getPeriodStart(period)
+    if (!start) return history
+    return history.filter(w => new Date(w.endTime) >= start)
+  }, [history, period])
+
   if (history.length === 0) {
     return (
       <div className="screen" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: '60vh', gap: 16 }}>
@@ -26,10 +56,9 @@ export default function HistoryScreen({ history, onDelete }) {
     )
   }
 
-  const sorted = [...history].reverse()
+  const sorted = [...filteredHistory].reverse()
 
-  // Calculate PRs across all history
-  const prs = {}
+  // Calculate PR markers across all history
   const prByWorkout = {}
   const runningPrs = {}
   history.forEach(w => {
@@ -43,16 +72,26 @@ export default function HistoryScreen({ history, onDelete }) {
         prByWorkout[w.startTime][e.exerciseId] = true
         runningPrs[e.exerciseId] = bestInWorkout
       }
-      prs[e.exerciseId] = Math.max(prs[e.exerciseId] ?? 0, bestInWorkout)
+    })
+  })
+
+  const periodBest = {}
+  filteredHistory.forEach(w => {
+    w.exercises.forEach(e => {
+      const bestInWorkout = e.sets
+        .filter(s => s.completed)
+        .reduce((best, s) => Math.max(best, calcE1RM(s.weight, s.reps)), 0)
+
+      periodBest[e.exerciseId] = Math.max(periodBest[e.exerciseId] ?? 0, bestInWorkout)
     })
   })
 
   // Total stats
-  const totalWorkouts = history.length
-  const totalVolume = history.reduce((acc, w) =>
+  const totalWorkouts = filteredHistory.length
+  const totalVolume = filteredHistory.reduce((acc, w) =>
     acc + w.exercises.reduce((a, e) =>
       a + e.sets.filter(s => s.completed).reduce((x, s) => x + (s.weight * s.reps), 0), 0), 0)
-  const totalSets = history.reduce((acc, w) =>
+  const totalSets = filteredHistory.reduce((acc, w) =>
     acc + w.exercises.reduce((a, e) => a + e.sets.filter(s => s.completed).length, 0), 0)
 
   return (
@@ -60,6 +99,21 @@ export default function HistoryScreen({ history, onDelete }) {
       <div style={{ paddingTop: 8 }}>
         <h1 className="h2">Histórico</h1>
         <p className="caption mt-8">Sua jornada de força</p>
+      </div>
+
+      <div className="history-filter" role="tablist" aria-label="Filtrar histórico por período">
+        {PERIODS.map(option => (
+          <button
+            key={option.id}
+            type="button"
+            className={`history-filter-btn ${period === option.id ? 'active' : ''}`}
+            onClick={() => setPeriod(option.id)}
+            role="tab"
+            aria-selected={period === option.id}
+          >
+            {option.label}
+          </button>
+        ))}
       </div>
 
       {/* Overall stats */}
@@ -82,12 +136,19 @@ export default function HistoryScreen({ history, onDelete }) {
         </div>
       </div>
 
-      {/* PRs section */}
-      {Object.keys(prs).length > 0 && (
+      {filteredHistory.length === 0 && (
+        <div className="card-2 mb-24" style={{ textAlign: 'center' }}>
+          <p style={{ fontSize: 13, fontWeight: 700 }}>Nenhum treino neste período</p>
+          <p className="caption mt-8">Troque o filtro para ver registros mais antigos.</p>
+        </div>
+      )}
+
+      {/* Best lifts section */}
+      {Object.keys(periodBest).length > 0 && (
         <>
-          <h2 className="h3 mb-12">🏆 Recordes Pessoais</h2>
+          <h2 className="h3 mb-12">🏆 Melhores do período</h2>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 24 }}>
-            {Object.entries(prs)
+            {Object.entries(periodBest)
               .sort(([, a], [, b]) => b - a)
               .map(([exId, e1rm]) => {
                 const ex = EXERCISES[exId]
@@ -112,7 +173,7 @@ export default function HistoryScreen({ history, onDelete }) {
       )}
 
       {/* Workout list */}
-      <h2 className="h3 mb-12">Todos os treinos</h2>
+      <h2 className="h3 mb-12">Treinos do período</h2>
       {sorted.map((w, i) => {
         const vol = w.exercises.reduce((a, e) =>
           a + e.sets.filter(s => s.completed).reduce((x, s) => x + (s.weight * s.reps), 0), 0)
