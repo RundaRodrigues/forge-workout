@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react'
 import { EXERCISES, calcE1RM } from '../data/exercises.js'
+import { calcWorkoutCalories, formatCalories } from '../data/calories.js'
 
 function formatDate(ts) {
   return new Date(ts).toLocaleDateString('pt-BR', {
@@ -93,6 +94,7 @@ export default function HistoryScreen({ history, onDelete }) {
       a + e.sets.filter(s => s.completed).reduce((x, s) => x + (s.weight * s.reps), 0), 0), 0)
   const totalSets = filteredHistory.reduce((acc, w) =>
     acc + w.exercises.reduce((a, e) => a + e.sets.filter(s => s.completed).length, 0), 0)
+  const totalCalories = filteredHistory.reduce((acc, workout) => acc + calcWorkoutCalories(workout), 0)
 
   return (
     <div className="screen animate-in">
@@ -126,7 +128,11 @@ export default function HistoryScreen({ history, onDelete }) {
           <div className="stat-value grad">{totalSets}</div>
           <div className="label">Sets totais</div>
         </div>
-        <div className="stat-box" style={{ gridColumn: '1 / -1' }}>
+        <div className="stat-box">
+          <div className="stat-value grad">{totalCalories}</div>
+          <div className="label">Kcal gastas</div>
+        </div>
+        <div className="stat-box">
           <div className="stat-value grad">
             {totalVolume >= 1000
               ? `${(totalVolume / 1000).toFixed(1)}t`
@@ -179,16 +185,17 @@ export default function HistoryScreen({ history, onDelete }) {
           a + e.sets.filter(s => s.completed).reduce((x, s) => x + (s.weight * s.reps), 0), 0)
         const sets = w.exercises.reduce((a, e) => a + e.sets.filter(s => s.completed).length, 0)
         const dur = w.endTime - w.startTime
+        const calories = calcWorkoutCalories(w)
 
         return (
-          <WorkoutEntry key={w.startTime} workout={w} volume={vol} sets={sets} duration={dur} prExercises={prByWorkout[w.startTime] ?? {}} onDelete={onDelete} />
+          <WorkoutEntry key={w.startTime} workout={w} volume={vol} sets={sets} duration={dur} calories={calories} prExercises={prByWorkout[w.startTime] ?? {}} onDelete={onDelete} />
         )
       })}
     </div>
   )
 }
 
-function WorkoutEntry({ workout, volume, sets, duration, prExercises, onDelete }) {
+function WorkoutEntry({ workout, volume, sets, duration, calories, prExercises, onDelete }) {
   const [expanded, setExpanded] = useState(false)
   const [confirming, setConfirming] = useState(false)
 
@@ -214,7 +221,7 @@ function WorkoutEntry({ workout, volume, sets, duration, prExercises, onDelete }
           <p className="caption mt-8">{formatDate(workout.endTime)}</p>
         </div>
         <div style={{ textAlign: 'right' }}>
-          <p style={{ fontSize: 13, fontWeight: 700 }}>{formatDuration(duration)}</p>
+          <p style={{ fontSize: 13, fontWeight: 700 }}>{formatDuration(duration)} · {formatCalories(calories)}</p>
           <p className="caption" style={{ whiteSpace: 'nowrap' }}>{volume}kg · {sets} sets</p>
         </div>
       </div>

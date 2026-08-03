@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { PROGRAMS } from '../data/programs.js'
 import { EXERCISES } from '../data/exercises.js'
+import { calcPlannedWorkoutCalories, formatCalories } from '../data/calories.js'
 import WorkoutPreviewModal from './WorkoutPreviewModal.jsx'
 
 const GENDER_LABELS = {
@@ -44,11 +45,11 @@ export default function ProgramsScreen({ programId, gender, onStartWorkout, onCh
         <div className="row gap-12">
           <span style={{ fontSize: 28 }}>🔬</span>
           <div>
-            <p style={{ fontSize: 14, fontWeight: 700 }}>Filosofia Low Volume</p>
+            <p style={{ fontSize: 14, fontWeight: 700 }}>Foco Massa + Queima</p>
             <p className="caption mt-8">
               {gender === 'female'
-                ? 'Foco em glúteos e definição. Alta intensidade, recuperação completa.'
-                : '2–4 sets por exercício. Intensidade máxima. Recuperação total.'}
+                ? 'Glúteos e membros superiores com reps moderadas, descanso curto e volume suficiente para definição.'
+                : 'Reps de hipertrofia, descanso controlado e volume semanal para ganhar massa sem perder densidade.'}
             </p>
           </div>
         </div>
@@ -120,6 +121,7 @@ export default function ProgramsScreen({ programId, gender, onStartWorkout, onCh
 
 function DayCard({ day, onPreview, onStart }) {
   const totalSets = day.exercises.reduce((a, e) => a + e.sets, 0)
+  const calories = calcPlannedWorkoutCalories(day)
 
   return (
     <div className="card">
@@ -127,7 +129,7 @@ function DayCard({ day, onPreview, onStart }) {
         <div>
           <span className={`tag tag-${day.category}`}>{day.name}</span>
           <p className="h3" style={{ marginTop: 6 }}>{day.subtitle}</p>
-          <p className="caption mt-8">{day.exercises.length} exercícios · {totalSets} sets totais</p>
+          <p className="caption mt-8">{day.exercises.length} exercícios · {totalSets} sets · {formatCalories(calories)}</p>
         </div>
         <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
           {day.exercises.map(({ exerciseId }) => {

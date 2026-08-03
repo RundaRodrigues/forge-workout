@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { EXERCISES, calcRecommendedRest, calcE1RM } from '../data/exercises.js'
+import { calcWorkoutCalories, formatCalories } from '../data/calories.js'
 
 function formatElapsed(ms) {
   const s = Math.floor(ms / 1000)
@@ -37,6 +38,7 @@ export default function WorkoutScreen({ activeWorkout, onUpdateWorkout, onFinish
 
   const totalVolume = activeWorkout.exercises.reduce((acc, e) =>
     acc + e.sets.filter(s => s.completed).reduce((a, s) => a + (s.weight * s.reps), 0), 0)
+  const calories = calcWorkoutCalories(activeWorkout)
 
   function getExHistory() {
     return history.flatMap(w => w.exercises.filter(e => e.exerciseId === currentExercise.exerciseId))
@@ -142,6 +144,10 @@ export default function WorkoutScreen({ activeWorkout, onUpdateWorkout, onFinish
           <div style={{ textAlign: 'right' }}>
             <p className="volume-badge">{totalVolume}kg</p>
             <p className="caption">volume</p>
+          </div>
+          <div style={{ textAlign: 'right' }}>
+            <p className="volume-badge">{formatCalories(calories)}</p>
+            <p className="caption">gasto</p>
           </div>
         </div>
       </div>
@@ -348,7 +354,7 @@ export default function WorkoutScreen({ activeWorkout, onUpdateWorkout, onFinish
             <p style={{ fontSize: 13, fontWeight: 600 }}>
               Descanso: {Math.round(ex.rest.recommended / 60)}–{Math.round(ex.rest.max / 60)} min
             </p>
-            <p className="caption">Ajustado pela intensidade</p>
+            <p className="caption">Denso para hipertrofia e queima de gordura</p>
           </div>
         </div>
 

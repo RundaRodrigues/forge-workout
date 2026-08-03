@@ -1,8 +1,8 @@
 export const PROGRAMS = {
   'lv-ppl': {
     id: 'lv-ppl',
-    name: 'Low Volume PPL',
-    description: 'Push / Pull / Pernas — 3× por semana. Volume mínimo para máximo ganho.',
+    name: 'PPL Hipertrofia & Queima',
+    description: 'Push / Pull / Pernas — 3× por semana. Foco em massa muscular, densidade e gasto calórico.',
     frequency: 3,
     days: [
       {
@@ -11,9 +11,9 @@ export const PROGRAMS = {
         subtitle: 'Peito · Ombro · Tríceps',
         category: 'push',
         exercises: [
-          { exerciseId: 'bench-press',   sets: 3, repRange: [4, 6]  },
-          { exerciseId: 'overhead-press',sets: 3, repRange: [5, 8]  },
-          { exerciseId: 'incline-press', sets: 2, repRange: [6, 10] },
+          { exerciseId: 'bench-press',   sets: 3, repRange: [8, 10] },
+          { exerciseId: 'overhead-press',sets: 3, repRange: [8, 10] },
+          { exerciseId: 'incline-press', sets: 3, repRange: [10, 12] },
           { exerciseId: 'lateral-raise', sets: 3, repRange: [12, 20]},
           { exerciseId: 'machine-fly',   sets: 3, repRange: [12, 15]},
         ],
@@ -24,9 +24,9 @@ export const PROGRAMS = {
         subtitle: 'Costas · Bíceps · Ombro Post.',
         category: 'pull',
         exercises: [
-          { exerciseId: 'pullup',       sets: 3, repRange: [4, 8]  },
-          { exerciseId: 'barbell-row',   sets: 3, repRange: [5, 8]  },
-          { exerciseId: 'lat-pulldown', sets: 3, repRange: [8, 12] },
+          { exerciseId: 'pullup',       sets: 3, repRange: [6, 10] },
+          { exerciseId: 'barbell-row',   sets: 3, repRange: [8, 12] },
+          { exerciseId: 'lat-pulldown', sets: 3, repRange: [10, 12] },
           { exerciseId: 'face-pull',    sets: 3, repRange: [15, 20]},
           { exerciseId: 'bicep-curl',   sets: 3, repRange: [10, 15]},
         ],
@@ -37,10 +37,10 @@ export const PROGRAMS = {
         subtitle: 'Quadríceps · Glúteos · Isquio',
         category: 'legs',
         exercises: [
-          { exerciseId: 'squat',              sets: 3, repRange: [4, 6]  },
-          { exerciseId: 'romanian-deadlift',  sets: 3, repRange: [6, 10] },
-          { exerciseId: 'leg-curl',           sets: 3, repRange: [10, 15]},
-          { exerciseId: 'leg-press',          sets: 3, repRange: [8, 12] },
+          { exerciseId: 'squat',              sets: 3, repRange: [8, 10] },
+          { exerciseId: 'romanian-deadlift',  sets: 3, repRange: [8, 12] },
+          { exerciseId: 'leg-curl',           sets: 3, repRange: [12, 15]},
+          { exerciseId: 'leg-press',          sets: 3, repRange: [10, 15] },
           { exerciseId: 'calf-raise',         sets: 4, repRange: [15, 25]},
         ],
       },
@@ -49,8 +49,8 @@ export const PROGRAMS = {
 
   'lv-ppl-female': {
     id: 'lv-ppl-female',
-    name: 'Low Volume PPL — Feminino',
-    description: 'Push / Pull / Glúteos — 3× por semana. Foco em definição e hipertrofia feminina.',
+    name: 'PPL Glúteos & Definição',
+    description: 'Push / Pull / Glúteos — 3× por semana. Foco em hipertrofia, densidade e queima de gordura.',
     frequency: 3,
     days: [
       {
@@ -84,9 +84,9 @@ export const PROGRAMS = {
         category: 'legs',
         exercises: [
           { exerciseId: 'hip-thrust',         sets: 4, repRange: [10, 15] },
-          { exerciseId: 'squat',              sets: 3, repRange: [10, 12] },
+          { exerciseId: 'squat',              sets: 3, repRange: [10, 15] },
           { exerciseId: 'romanian-deadlift',  sets: 3, repRange: [10, 12] },
-          { exerciseId: 'leg-curl',           sets: 3, repRange: [12, 15] },
+          { exerciseId: 'leg-curl',           sets: 3, repRange: [12, 20] },
         ],
       },
     ],

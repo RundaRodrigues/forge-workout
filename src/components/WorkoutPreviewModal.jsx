@@ -1,4 +1,5 @@
 import { EXERCISES } from '../data/exercises.js'
+import { calcPlannedWorkoutCalories, formatCalories } from '../data/calories.js'
 
 const CAT_COLOR = {
   push: 'var(--red)',
@@ -11,6 +12,7 @@ export default function WorkoutPreviewModal({ day, onClose, onStart }) {
 
   const totalSets = day.exercises.reduce((a, e) => a + e.sets, 0)
   const accent = CAT_COLOR[day.category] ?? 'var(--orange)'
+  const calories = calcPlannedWorkoutCalories(day)
 
   return (
     <div
@@ -55,7 +57,7 @@ export default function WorkoutPreviewModal({ day, onClose, onStart }) {
               </span>
               <h2 className="h2">{day.subtitle}</h2>
               <p className="caption" style={{ marginTop: 4 }}>
-                {day.exercises.length} exercícios · {totalSets} sets totais
+                {day.exercises.length} exercícios · {totalSets} sets · {formatCalories(calories)}
               </p>
             </div>
             <button

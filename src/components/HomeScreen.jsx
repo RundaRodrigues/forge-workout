@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { PROGRAMS, getTodaySchedule } from '../data/programs.js'
 import { EXERCISES } from '../data/exercises.js'
+import { calcPlannedWorkoutCalories, calcWorkoutCalories, formatCalories } from '../data/calories.js'
 import WorkoutPreviewModal from './WorkoutPreviewModal.jsx'
 
 function getGreeting() {
@@ -38,8 +39,10 @@ export default function HomeScreen({ history, activeWorkout, programId, onStartW
   const totalVolume = weekWorkouts.reduce((acc, w) =>
     acc + w.exercises.reduce((a, e) =>
       a + e.sets.filter(s => s.completed).reduce((x, s) => x + (s.weight * s.reps), 0), 0), 0)
+  const weekCalories = weekWorkouts.reduce((acc, workout) => acc + calcWorkoutCalories(workout), 0)
 
   const recentWorkouts = history.slice(-3).reverse()
+  const todayCalories = calcPlannedWorkoutCalories(today)
 
   return (
     <>
@@ -91,8 +94,8 @@ export default function HomeScreen({ history, activeWorkout, programId, onStartW
           <div className="label">Volume semanal</div>
         </div>
         <div className="stat-box">
-          <div className="stat-value">{history.length}</div>
-          <div className="label">Total de treinos</div>
+          <div className="stat-value">{weekCalories}</div>
+          <div className="label">Kcal semanais</div>
         </div>
       </div>
 
@@ -136,6 +139,7 @@ export default function HomeScreen({ history, activeWorkout, programId, onStartW
               <p className="caption">
                 {today.exercises.reduce((a, e) => a + e.sets, 0)} sets
               </p>
+              <p className="caption">{formatCalories(todayCalories)}</p>
             </div>
           </div>
 
@@ -185,6 +189,7 @@ export default function HomeScreen({ history, activeWorkout, programId, onStartW
             const dur = Math.round((w.endTime - w.startTime) / 60000)
             const vol = w.exercises.reduce((a, e) =>
               a + e.sets.filter(s => s.completed).reduce((x, s) => x + (s.weight * s.reps), 0), 0)
+            const calories = calcWorkoutCalories(w)
             return (
               <div className="history-card" key={i} style={{ marginBottom: 8 }}>
                 <div className="history-header">
@@ -196,7 +201,7 @@ export default function HomeScreen({ history, activeWorkout, programId, onStartW
                   </div>
                   <div style={{ textAlign: 'right' }}>
                     <p style={{ fontSize: 13, fontWeight: 700 }}>{dur}min</p>
-                    <p className="caption" style={{ whiteSpace: 'nowrap' }}>{vol}kg vol.</p>
+                    <p className="caption" style={{ whiteSpace: 'nowrap' }}>{formatCalories(calories)} · {vol}kg</p>
                   </div>
                 </div>
               </div>
