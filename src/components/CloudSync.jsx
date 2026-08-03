@@ -96,7 +96,7 @@ export default function CloudSync({ data, onLoad, autoSync }) {
       setMsg(`Salvo às ${new Date().toLocaleTimeString('pt-BR')}`)
     } catch (err) {
       setStatus('error')
-      setMsg(err.message)
+      setMsg(translateError(err.message))
     }
   }
 
@@ -110,7 +110,7 @@ export default function CloudSync({ data, onLoad, autoSync }) {
       setMsg('Dados restaurados!')
     } catch (err) {
       setStatus('error')
-      setMsg(err.message)
+      setMsg(translateError(err.message))
     }
   }
 
@@ -335,8 +335,8 @@ const inputStyle = {
 
 function translateError(msg) {
   if (!msg) return 'Não foi possível entrar. Tente novamente.'
-  if (msg.includes('fetch failed') || msg.includes('Failed to fetch') || msg.includes('NetworkError')) {
-    return 'Não consegui conectar ao servidor de login. Verifique a internet ou a configuração do Supabase.'
+  if (msg.includes('Load failed') || msg.includes('fetch failed') || msg.includes('Failed to fetch') || msg.includes('NetworkError')) {
+    return 'Servidor de login indisponível. O projeto Supabase configurado no app não está respondendo.'
   }
   if (msg.includes('Invalid login credentials')) return 'Email ou senha incorretos.'
   if (msg.includes('Email not confirmed'))       return 'Confirme seu email antes de entrar.'
