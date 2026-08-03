@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import {
   signUp, signIn, signOut,
-  onAuthStateChange, loadFromCloud, saveToCloud,
+  getSession, onAuthStateChange, loadFromCloud, saveToCloud,
 } from '../services/supabase.js'
 
 function formatTime(ts) {
@@ -20,10 +20,20 @@ export default function CloudSync({ data, onLoad, autoSync }) {
 
   /* ── Escuta auth state ──────────────────────────────── */
   useEffect(() => {
+    let alive = true
+    getSession()
+      .then(session => {
+        if (alive) setUser(session?.user ?? null)
+      })
+      .catch(() => {})
+
     const sub = onAuthStateChange((session) => {
       setUser(session?.user ?? null)
     })
-    return () => sub.subscription.unsubscribe()
+    return () => {
+      alive = false
+      sub.subscription.unsubscribe()
+    }
   }, [])
 
   /* ── Auto-load ao logar ─────────────────────────────── */
@@ -51,10 +61,16 @@ export default function CloudSync({ data, onLoad, autoSync }) {
     setMsg('')
     try {
       if (mode === 'register') {
-        await signUp(email, password)
-        setMsg('Conta criada! Já pode usar o app.')
+        const result = await signUp(email, password)
+        if (result.session) {
+          setUser(result.user)
+          setOpen(false)
+        } else {
+          setMsg('Conta criada. Confirme seu email e depois entre.')
+        }
       } else {
-        await signIn(email, password)
+        const result = await signIn(email, password)
+        setUser(result.user)
         setOpen(false)
       }
       setStatus('done')
@@ -318,6 +334,10 @@ const inputStyle = {
 }
 
 function translateError(msg) {
+  if (!msg) return 'Não foi possível entrar. Tente novamente.'
+  if (msg.includes('fetch failed') || msg.includes('Failed to fetch') || msg.includes('NetworkError')) {
+    return 'Não consegui conectar ao servidor de login. Verifique a internet ou a configuração do Supabase.'
+  }
   if (msg.includes('Invalid login credentials')) return 'Email ou senha incorretos.'
   if (msg.includes('Email not confirmed'))       return 'Confirme seu email antes de entrar.'
   if (msg.includes('User already registered'))   return 'Este email já possui conta. Faça login.'
