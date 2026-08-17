@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import {
   signUp, signIn, signOut,
   getSession, onAuthStateChange, loadFromCloud, saveToCloud,
+  getSupabaseConfig, saveSupabaseConfig, testSupabaseConnection,
 } from '../services/supabase.js'
 
 function formatTime(ts) {
@@ -17,6 +18,8 @@ export default function CloudSync({ data, onLoad, autoSync }) {
   const [password, setPassword] = useState('')
   const [status, setStatus]   = useState('idle')    // idle | loading | done | error
   const [msg, setMsg]         = useState('')
+  const [showConfig, setShowConfig] = useState(false)
+  const [configDraft, setConfigDraft] = useState(() => getSupabaseConfig())
 
   /* ── Escuta auth state ──────────────────────────────── */
   useEffect(() => {
@@ -27,12 +30,17 @@ export default function CloudSync({ data, onLoad, autoSync }) {
       })
       .catch(() => {})
 
-    const sub = onAuthStateChange((session) => {
-      setUser(session?.user ?? null)
-    })
+    let sub = null
+    try {
+      sub = onAuthStateChange((session) => {
+        setUser(session?.user ?? null)
+      })
+    } catch {
+      setUser(null)
+    }
     return () => {
       alive = false
-      sub.subscription.unsubscribe()
+      sub?.subscription?.unsubscribe()
     }
   }, [])
 
@@ -100,6 +108,21 @@ export default function CloudSync({ data, onLoad, autoSync }) {
     }
   }
 
+  async function handleConfigSave() {
+    setStatus('loading')
+    setMsg('')
+    try {
+      await testSupabaseConnection(configDraft)
+      saveSupabaseConfig(configDraft)
+      setStatus('done')
+      setMsg('Supabase conectado. Agora tente entrar ou criar conta.')
+      setShowConfig(false)
+    } catch (err) {
+      setStatus('error')
+      setMsg(translateError(err.message))
+    }
+  }
+
   async function handleLoad() {
     setStatus('loading')
     try {
@@ -130,6 +153,7 @@ export default function CloudSync({ data, onLoad, autoSync }) {
   const chipColor  = isGreen ? 'var(--green)' : autoError ? 'var(--red)' : 'var(--text-2)'
   const chipBg     = isGreen ? 'rgba(6,214,160,.12)' : autoError ? 'rgba(255,59,59,.12)' : 'var(--surface-2)'
   const chipBorder = isGreen ? 'rgba(6,214,160,.3)'  : autoError ? 'rgba(255,59,59,.3)'  : 'var(--border)'
+  const configHost = getSupabaseConfig().url.replace(/^https?:\/\//, '')
 
   return (
     <>
@@ -182,6 +206,59 @@ export default function CloudSync({ data, onLoad, autoSync }) {
             <p className="caption" style={{ marginBottom: 16 }}>
               {user ? 'Seus treinos ficam salvos na nuvem e sincronizam entre dispositivos.' : 'Entre para salvar seus treinos na nuvem.'}
             </p>
+
+            <div style={{
+              padding: '10px 12px',
+              background: 'var(--surface-2)',
+              border: '1px solid var(--border)',
+              borderRadius: 'var(--r-md)',
+              marginBottom: 12,
+            }}>
+              <div className="row-between" style={{ gap: 10 }}>
+                <div style={{ minWidth: 0 }}>
+                  <p style={{ fontSize: 12, fontWeight: 700 }}>Supabase</p>
+                  <p className="caption" style={{ fontSize: 11, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    {configHost || 'Não configurado'}
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  className="btn btn-ghost"
+                  style={{ fontSize: 11, padding: '6px 10px', flexShrink: 0 }}
+                  onClick={() => setShowConfig(open => !open)}
+                >
+                  Configurar
+                </button>
+              </div>
+
+              {showConfig && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 10 }}>
+                  <input
+                    type="url"
+                    placeholder="https://seu-projeto.supabase.co"
+                    value={configDraft.url}
+                    onChange={e => setConfigDraft(current => ({ ...current, url: e.target.value }))}
+                    style={inputStyle}
+                  />
+                  <input
+                    type="password"
+                    placeholder="anon public key ou publishable key"
+                    value={configDraft.key}
+                    onChange={e => setConfigDraft(current => ({ ...current, key: e.target.value }))}
+                    style={inputStyle}
+                  />
+                  <button
+                    type="button"
+                    className="btn btn-primary w-full"
+                    style={{ fontSize: 13, padding: '12px' }}
+                    onClick={handleConfigSave}
+                    disabled={status === 'loading'}
+                  >
+                    {status === 'loading' ? 'Testando...' : 'Testar e salvar conexão'}
+                  </button>
+                </div>
+              )}
+            </div>
 
             {!user ? (
               /* ── Login / Registro ───────────────── */
@@ -335,8 +412,14 @@ const inputStyle = {
 
 function translateError(msg) {
   if (!msg) return 'Não foi possível entrar. Tente novamente.'
+  if (msg.includes('SUPABASE_CONFIG_INVALID')) {
+    return 'Informe uma Project URL do Supabase e uma chave pública válida.'
+  }
+  if (msg.includes('SUPABASE_CONFIG_UNREACHABLE')) {
+    return 'Não consegui validar esse Supabase. Confira a URL do projeto e a chave pública.'
+  }
   if (msg.includes('Load failed') || msg.includes('fetch failed') || msg.includes('Failed to fetch') || msg.includes('NetworkError')) {
-    return 'Servidor de login indisponível. O projeto Supabase configurado no app não está respondendo.'
+    return 'Servidor de login indisponível. Confira a URL/chave do Supabase em Configurar.'
   }
   if (msg.includes('Invalid login credentials')) return 'Email ou senha incorretos.'
   if (msg.includes('Email not confirmed'))       return 'Confirme seu email antes de entrar.'

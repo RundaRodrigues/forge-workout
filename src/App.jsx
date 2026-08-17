@@ -62,10 +62,10 @@ export default function App() {
 
   /* ── Auto-sync to Supabase ───────────────────────────── */
   const autoSync = useCallback(async (data) => {
-    const session = await getSession()
-    if (!session) return   // not authenticated — skip silently
-    setCloudSync({ state: 'syncing', time: null })
     try {
+      const session = await getSession()
+      if (!session) return   // not authenticated — skip silently
+      setCloudSync({ state: 'syncing', time: null })
       await saveToCloud(data)
       setCloudSync({ state: 'done', time: Date.now() })
     } catch {
