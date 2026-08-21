@@ -229,7 +229,9 @@ function WorkoutEntry({ workout, volume, sets, duration, calories, prExercises, 
       {expanded && (
         <div style={{ marginTop: 10 }}>
           <div className="sep" />
-          {workout.exercises.map((e, i) => {
+          {workout.exercises
+            .filter(e => e.active !== false || e.sets.some(s => s.completed))
+            .map((e, i) => {
             const ex = EXERCISES[e.exerciseId]
             if (!ex) return null
             const completedSets = e.sets.filter(s => s.completed)
@@ -244,6 +246,7 @@ function WorkoutEntry({ workout, volume, sets, duration, calories, prExercises, 
                     <span>{ex.emoji}</span>
                     <span style={{ fontSize: 13, fontWeight: 600 }}>{ex.name}</span>
                     {isPR && <span className="tag tag-pr" style={{ fontSize: 10 }}>PR</span>}
+                    {e.active === false && <span className="tag" style={{ fontSize: 10 }}>Pausado</span>}
                   </div>
                   {bestE1rm > 0 && (
                     <span className="caption" style={{ whiteSpace: 'nowrap' }}>{bestE1rm}kg e1RM</span>

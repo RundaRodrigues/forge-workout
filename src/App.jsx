@@ -135,7 +135,7 @@ export default function App() {
       programId, dayId: day.id, dayName: day.name,
       category: day.category, startTime: Date.now(),
       exercises: day.exercises.map(({ exerciseId, sets, repRange }) => ({
-        exerciseId, plannedSets: sets, repRange,
+        exerciseId, plannedSets: sets, repRange, active: true,
         sets: Array.from({ length: sets }, () => ({
           weight: 0, reps: repRange[0], completed: false,
         })),
