@@ -2,8 +2,8 @@ export const PROGRAMS = {
   'lv-ppl': {
     id: 'lv-ppl',
     name: 'PPL Hipertrofia & Queima',
-    description: 'Push / Pull / Pernas — 3× por semana. Foco em massa muscular, densidade e gasto calórico.',
-    frequency: 3,
+    description: 'Push / Pull / Pernas — 5× por semana. Foco em massa muscular, densidade e gasto calórico.',
+    frequency: 5,
     days: [
       {
         id: 'push',
@@ -55,8 +55,8 @@ export const PROGRAMS = {
   'lv-ppl-female': {
     id: 'lv-ppl-female',
     name: 'PPL Glúteos & Definição',
-    description: 'Push / Pull / Glúteos — 3× por semana. Foco em hipertrofia, densidade e queima de gordura.',
-    frequency: 3,
+    description: 'Push / Pull / Glúteos — 5× por semana. Foco em hipertrofia, densidade e queima de gordura.',
+    frequency: 5,
     days: [
       {
         id: 'push',
@@ -122,9 +122,9 @@ export function getTodaySchedule(programId, history) {
   const program = PROGRAMS[programId]
   if (!program) return null
 
-  // Simple rule: workout on Mon/Wed/Fri (indices 1,3,5)
+  // Simple rule: workout from Monday to Friday (indices 1-5)
   const dow = new Date().getDay() // 0=Sun,1=Mon...
-  const workoutDays = [1, 3, 5]
+  const workoutDays = [1, 2, 3, 4, 5]
   const isWorkoutDay = workoutDays.includes(dow)
 
   if (!isWorkoutDay) return null

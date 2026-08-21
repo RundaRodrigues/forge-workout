@@ -14,6 +14,7 @@ export default function ProgramsScreen({ programId, gender, onStartWorkout, onCh
   const [previewDay, setPreviewDay] = useState(null)
   const genderInfo = GENDER_LABELS[gender] ?? GENDER_LABELS.male
   const legsLabel = gender === 'female' ? 'G' : 'L'
+  const weeklyPlan = ['P', 'Pu', legsLabel, 'P', 'Pu', '–', '–']
 
   return (
     <div className="screen animate-in">
@@ -78,7 +79,8 @@ export default function ProgramsScreen({ programId, gender, onStartWorkout, onCh
         <p className="label mb-8">Estrutura semanal</p>
         <div style={{ display: 'flex', gap: 6 }}>
           {['Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb', 'Dom'].map((d, i) => {
-            const isWorkout = [0, 2, 4].includes(i)
+            const dayLabel = weeklyPlan[i]
+            const isWorkout = dayLabel !== '–'
             return (
               <div key={d} style={{ flex: 1, textAlign: 'center' }}>
                 <p style={{ fontSize: 10, color: 'var(--text-3)', marginBottom: 4 }}>{d}</p>
@@ -88,14 +90,14 @@ export default function ProgramsScreen({ programId, gender, onStartWorkout, onCh
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
                   fontSize: 11, fontWeight: 700,
                 }}>
-                  {isWorkout ? ['P', 'Pu', legsLabel][Math.floor(i / 2)] : '–'}
+                  {dayLabel}
                 </div>
               </div>
             )
           })}
         </div>
         <p className="caption mt-12" style={{ opacity: .5 }}>
-          P = Push · Pu = Pull · {legsLabel} = {gender === 'female' ? 'Glúteos' : 'Legs'}
+          Seg–Sex = ciclo P / Pu / {legsLabel} · fim de semana = descanso
         </p>
       </div>
 
