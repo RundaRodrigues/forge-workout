@@ -8,6 +8,26 @@ const CATEGORY_MET = {
   legs: 6.3,
 }
 
+export const CARDIO_OPTIONS = [
+  { id: 'stairs', label: 'Escada', met: 8.8 },
+  { id: 'bike', label: 'Bicicleta', met: 6.8 },
+  { id: 'treadmill', label: 'Esteira', met: 7.2 },
+  { id: 'elliptical', label: 'Elíptico', met: 6.5 },
+  { id: 'swimming', label: 'Natação', met: 8.0 },
+]
+
+export function getCardioOption(id) {
+  return CARDIO_OPTIONS.find(option => option.id === id) ?? null
+}
+
+export function calcCardioCalories(cardio) {
+  if (!cardio?.type || !cardio?.durationMin) return 0
+  const option = getCardioOption(cardio.type)
+  if (!option) return 0
+
+  return Math.round((option.met * 3.5 * DEFAULT_BODY_WEIGHT_KG / 200) * cardio.durationMin)
+}
+
 export function getWorkoutStats(workout) {
   const completedSets = workout.exercises.reduce((acc, exercise) =>
     acc + exercise.sets.filter(set => set.completed).length, 0)
@@ -25,13 +45,15 @@ export function getWorkoutStats(workout) {
 
 export function calcWorkoutCalories(workout) {
   const { completedSets, volume, durationMin } = getWorkoutStats(workout)
-  if (durationMin <= 0 && completedSets === 0) return 0
+  const cardioCalories = calcCardioCalories(workout.cardio)
+  if (durationMin <= 0 && completedSets === 0) return cardioCalories
 
   const met = CATEGORY_MET[workout.category] ?? 5.5
-  const timeCalories = (met * 3.5 * DEFAULT_BODY_WEIGHT_KG / 200) * durationMin
+  const strengthDurationMin = Math.max(0, durationMin - (workout.cardio?.durationMin || 0))
+  const timeCalories = (met * 3.5 * DEFAULT_BODY_WEIGHT_KG / 200) * strengthDurationMin
   const workCalories = (completedSets * 2.2) + Math.min(70, volume / 1000 * 4)
 
-  return Math.max(0, Math.round(timeCalories + workCalories))
+  return Math.max(0, Math.round(timeCalories + workCalories + cardioCalories))
 }
 
 export function calcPlannedWorkoutCalories(day) {

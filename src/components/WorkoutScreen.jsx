@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { EXERCISES, calcRecommendedRest, calcE1RM } from '../data/exercises.js'
-import { calcWorkoutCalories, formatCalories } from '../data/calories.js'
+import { CARDIO_OPTIONS, calcCardioCalories, calcWorkoutCalories, formatCalories, getCardioOption } from '../data/calories.js'
 
 function formatElapsed(ms) {
   const s = Math.floor(ms / 1000)
@@ -45,6 +45,9 @@ export default function WorkoutScreen({ activeWorkout, onUpdateWorkout, onFinish
     acc + e.sets.filter(s => s.completed).reduce((a, s) => a + (s.weight * s.reps), 0), 0)
   const calories = calcWorkoutCalories(activeWorkout)
   const activeExercisesCount = activeWorkout.exercises.filter(isExerciseActive).length
+  const cardio = activeWorkout.cardio ?? { type: '', durationMin: 0 }
+  const cardioCalories = calcCardioCalories(cardio)
+  const cardioOption = getCardioOption(cardio.type)
 
   function getExHistory() {
     return history.flatMap(w => w.exercises.filter(e => e.exerciseId === currentExercise.exerciseId))
@@ -105,6 +108,23 @@ export default function WorkoutScreen({ activeWorkout, onUpdateWorkout, onFinish
     updated.exercises = updated.exercises.map((exercise, index) =>
       index === exerciseIdx ? { ...exercise, active: !isExerciseActive(exercise) } : exercise
     )
+    onUpdateWorkout(updated)
+  }
+
+  function updateCardio(patch) {
+    onUpdateWorkout({
+      ...activeWorkout,
+      cardio: {
+        type: cardio.type || '',
+        durationMin: cardio.durationMin || 0,
+        ...patch,
+      },
+    })
+  }
+
+  function clearCardio() {
+    const updated = { ...activeWorkout }
+    delete updated.cardio
     onUpdateWorkout(updated)
   }
 
@@ -420,6 +440,99 @@ export default function WorkoutScreen({ activeWorkout, onUpdateWorkout, onFinish
               Descanso: {Math.round(ex.rest.recommended / 60)}–{Math.round(ex.rest.max / 60)} min
             </p>
             <p className="caption">Denso para hipertrofia e queima de gordura</p>
+          </div>
+        </div>
+
+        {/* Cardio */}
+        <div className="card mt-10">
+          <div className="row-between mb-12">
+            <div>
+              <h2 className="h3">Cardio final</h2>
+              <p className="caption mt-8">
+                {cardioOption && cardio.durationMin
+                  ? `${cardioOption.label} · ${cardio.durationMin}min · ${formatCalories(cardioCalories)}`
+                  : 'Opcional depois da musculação'}
+              </p>
+            </div>
+            {(cardio.type || cardio.durationMin) && (
+              <button
+                type="button"
+                className="btn btn-ghost"
+                style={{ fontSize: 12, padding: '6px 10px' }}
+                onClick={clearCardio}
+              >
+                Limpar
+              </button>
+            )}
+          </div>
+
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: 8 }}>
+            {CARDIO_OPTIONS.map(option => {
+              const selected = cardio.type === option.id
+              return (
+                <button
+                  key={option.id}
+                  type="button"
+                  onClick={() => updateCardio({ type: option.id, durationMin: cardio.durationMin || 15 })}
+                  style={{
+                    minHeight: 38,
+                    border: `1px solid ${selected ? 'var(--orange)' : 'var(--border)'}`,
+                    borderRadius: 8,
+                    background: selected ? 'rgba(255,122,26,.14)' : 'var(--surface-2)',
+                    color: selected ? 'var(--orange)' : 'var(--text-2)',
+                    fontFamily: 'inherit',
+                    fontSize: 13,
+                    fontWeight: 700,
+                    cursor: 'pointer',
+                  }}
+                >
+                  {option.label}
+                </button>
+              )
+            })}
+          </div>
+
+          <div style={{ marginTop: 12 }}>
+            <p className="label mb-8">Tempo</p>
+            <div style={{ display: 'grid', gridTemplateColumns: '38px 1fr 38px', gap: 8, alignItems: 'center' }}>
+              <button
+                type="button"
+                className="btn btn-ghost"
+                style={{ padding: 0, height: 38 }}
+                onClick={() => updateCardio({ durationMin: Math.max(0, (cardio.durationMin || 0) - 5) })}
+              >
+                −
+              </button>
+              <input
+                type="number"
+                min="0"
+                inputMode="numeric"
+                placeholder="minutos"
+                value={cardio.durationMin || ''}
+                onChange={event => updateCardio({ durationMin: Math.max(0, parseInt(event.target.value) || 0) })}
+                style={{
+                  width: '100%',
+                  height: 38,
+                  textAlign: 'center',
+                  background: 'var(--surface-2)',
+                  border: '1px solid var(--border)',
+                  borderRadius: 8,
+                  color: 'var(--text)',
+                  fontFamily: 'inherit',
+                  fontSize: 15,
+                  fontWeight: 800,
+                  outline: 'none',
+                }}
+              />
+              <button
+                type="button"
+                className="btn btn-ghost"
+                style={{ padding: 0, height: 38 }}
+                onClick={() => updateCardio({ durationMin: (cardio.durationMin || 0) + 5, type: cardio.type || CARDIO_OPTIONS[0].id })}
+              >
+                +
+              </button>
+            </div>
           </div>
         </div>
 

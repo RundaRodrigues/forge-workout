@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
 import { EXERCISES, calcE1RM } from '../data/exercises.js'
-import { calcWorkoutCalories, formatCalories } from '../data/calories.js'
+import { calcCardioCalories, calcWorkoutCalories, formatCalories, getCardioOption } from '../data/calories.js'
 
 function formatDate(ts) {
   return new Date(ts).toLocaleDateString('pt-BR', {
@@ -198,6 +198,8 @@ export default function HistoryScreen({ history, onDelete }) {
 function WorkoutEntry({ workout, volume, sets, duration, calories, prExercises, onDelete }) {
   const [expanded, setExpanded] = useState(false)
   const [confirming, setConfirming] = useState(false)
+  const cardioOption = getCardioOption(workout.cardio?.type)
+  const cardioCalories = calcCardioCalories(workout.cardio)
 
   function handleDelete(e) {
     e.stopPropagation()
@@ -229,6 +231,20 @@ function WorkoutEntry({ workout, volume, sets, duration, calories, prExercises, 
       {expanded && (
         <div style={{ marginTop: 10 }}>
           <div className="sep" />
+          {cardioOption && workout.cardio?.durationMin > 0 && (
+            <div style={{ padding: '8px 0', borderBottom: '1px solid var(--border)' }}>
+              <div className="row-between">
+                <div className="row gap-8">
+                  <span>🔥</span>
+                  <span style={{ fontSize: 13, fontWeight: 600 }}>{cardioOption.label}</span>
+                  <span className="tag" style={{ fontSize: 10 }}>Cardio</span>
+                </div>
+                <span className="caption" style={{ whiteSpace: 'nowrap' }}>
+                  {workout.cardio.durationMin}min · {formatCalories(cardioCalories)}
+                </span>
+              </div>
+            </div>
+          )}
           {workout.exercises
             .filter(e => e.active !== false || e.sets.some(s => s.completed))
             .map((e, i) => {
