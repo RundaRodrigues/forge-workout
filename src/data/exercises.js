@@ -186,6 +186,19 @@ export const EXERCISES = {
     cues: ['Ombros baixos', 'Abre em arco', 'Evita roubar com o tronco'],
     emoji: '🪽',
   },
+  'wrist-curl': {
+    id: 'wrist-curl',
+    name: 'Rosca de Punho',
+    nameEn: 'Wrist Curl',
+    category: 'pull',
+    type: 'isolation',
+    muscles: ['Antebraço', 'Flexores do punho'],
+    defaultSets: 3,
+    repRange: [12, 20],
+    rest: { recommended: 45, min: 30, max: 75 },
+    cues: ['Antebraços apoiados', 'Punhos livres na borda', 'Sobe e desce controlando'],
+    emoji: '✊',
+  },
 
   /* ── LEGS ────────────────────────────────────────────── */
   'squat': {
