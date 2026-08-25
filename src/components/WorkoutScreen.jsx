@@ -14,6 +14,10 @@ function isExerciseActive(exercise) {
   return exercise.active !== false
 }
 
+function isSetReady(set) {
+  return set.weight !== '' && set.weight !== null && set.weight !== undefined && set.weight >= 0 && !!set.reps
+}
+
 export default function WorkoutScreen({ activeWorkout, onUpdateWorkout, onFinishWorkout, history, onStartRest }) {
   const [elapsed, setElapsed] = useState(0)
   const [selectedExIdx, setSelectedExIdx] = useState(0)
@@ -56,7 +60,7 @@ export default function WorkoutScreen({ activeWorkout, onUpdateWorkout, onFinish
   function handleCompleteSet(setIdx) {
     if (!currentActive) return
     const set = currentExercise.sets[setIdx]
-    if (!set.weight || !set.reps) return
+    if (!isSetReady(set)) return
 
     const updated = { ...activeWorkout }
     updated.exercises = updated.exercises.map((e, ei) => {
@@ -622,8 +626,8 @@ function SetRow({ setNum, set, repRange, isPlanned, categoryColor, onWeightChang
       <button
         className={`set-check ${set.completed ? 'done' : ''}`}
         onClick={onComplete}
-        disabled={disabled || set.completed || !set.weight || !set.reps}
-        style={{ opacity: disabled || !set.weight || !set.reps ? .3 : 1 }}
+        disabled={disabled || set.completed || !isSetReady(set)}
+        style={{ opacity: disabled || !isSetReady(set) ? .3 : 1 }}
         aria-label={`Concluir set ${setNum}`}
       >
         {set.completed ? '✓' : ''}

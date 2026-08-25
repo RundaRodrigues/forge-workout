@@ -106,12 +106,84 @@ export const PROGRAMS = {
       },
     ],
   },
+
+  'home-calisthenics': {
+    id: 'home-calisthenics',
+    name: 'Casa Barra & Calistenia',
+    description: 'Treino em casa — 5× por semana. Barra fixa para costas e calistenia para o resto do corpo.',
+    frequency: 5,
+    days: [
+      {
+        id: 'home-pull',
+        name: 'Barra',
+        subtitle: 'Costas · Bíceps · Core',
+        category: 'pull',
+        exercises: [
+          { exerciseId: 'pullup',             sets: 4, repRange: [5, 10] },
+          { exerciseId: 'chinup',             sets: 4, repRange: [6, 12] },
+          { exerciseId: 'hanging-knee-raise', sets: 3, repRange: [8, 15] },
+          { exerciseId: 'wrist-curl',         sets: 3, repRange: [12, 20] },
+        ],
+      },
+      {
+        id: 'home-legs',
+        name: 'Pernas',
+        subtitle: 'Quadríceps · Glúteos · Core',
+        category: 'legs',
+        exercises: [
+          { exerciseId: 'bodyweight-squat',        sets: 4, repRange: [15, 25] },
+          { exerciseId: 'bulgarian-split-squat',   sets: 3, repRange: [10, 15] },
+          { exerciseId: 'reverse-lunge',           sets: 3, repRange: [10, 16] },
+          { exerciseId: 'single-leg-glute-bridge', sets: 3, repRange: [12, 20] },
+          { exerciseId: 'calf-raise',              sets: 4, repRange: [15, 25] },
+        ],
+      },
+      {
+        id: 'home-push',
+        name: 'Push',
+        subtitle: 'Peito · Ombro · Tríceps',
+        category: 'push',
+        exercises: [
+          { exerciseId: 'push-up',          sets: 4, repRange: [10, 20] },
+          { exerciseId: 'pike-push-up',     sets: 3, repRange: [8, 15] },
+          { exerciseId: 'diamond-push-up',  sets: 3, repRange: [8, 15] },
+          { exerciseId: 'chair-dip',        sets: 3, repRange: [10, 18] },
+          { exerciseId: 'lateral-raise',    sets: 3, repRange: [12, 20] },
+        ],
+      },
+      {
+        id: 'home-core',
+        name: 'Core',
+        subtitle: 'Abdômen · Condicionamento',
+        category: 'legs',
+        exercises: [
+          { exerciseId: 'plank',              sets: 3, repRange: [30, 60] },
+          { exerciseId: 'mountain-climber',   sets: 3, repRange: [20, 40] },
+          { exerciseId: 'hanging-knee-raise', sets: 3, repRange: [8, 15] },
+          { exerciseId: 'push-up',            sets: 3, repRange: [10, 18] },
+        ],
+      },
+      {
+        id: 'home-full',
+        name: 'Full',
+        subtitle: 'Corpo todo · Queima',
+        category: 'push',
+        exercises: [
+          { exerciseId: 'pullup',                  sets: 3, repRange: [5, 10] },
+          { exerciseId: 'push-up',                 sets: 3, repRange: [10, 20] },
+          { exerciseId: 'bodyweight-squat',        sets: 3, repRange: [15, 25] },
+          { exerciseId: 'bulgarian-split-squat',   sets: 3, repRange: [10, 15] },
+          { exerciseId: 'mountain-climber',        sets: 3, repRange: [20, 40] },
+        ],
+      },
+    ],
+  },
 }
 
 /** Given a list of workout history entries, figure out what the next day should be */
 export function getNextProgramDay(programId, history) {
   const program = PROGRAMS[programId]
-  if (!program) return program.days[0]
+  if (!program) return null
 
   const days = program.days
   if (history.length === 0) return days[0]

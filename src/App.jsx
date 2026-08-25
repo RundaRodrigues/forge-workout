@@ -15,10 +15,10 @@ const STORAGE_KEY = 'forge_data_v1'
 function loadData() {
   try {
     const raw = localStorage.getItem(STORAGE_KEY)
-    if (!raw) return { history: [], activeWorkout: null, gender: null }
+    if (!raw) return { history: [], activeWorkout: null, gender: null, trainingMode: 'gym' }
     return JSON.parse(raw)
   } catch {
-    return { history: [], activeWorkout: null, gender: null }
+    return { history: [], activeWorkout: null, gender: null, trainingMode: 'gym' }
   }
 }
 
@@ -45,6 +45,7 @@ export default function App() {
   const [history, setHistory] = useState([])
   const [activeWorkout, setActiveWorkout] = useState(null)
   const [gender, setGender] = useState(null)
+  const [trainingMode, setTrainingMode] = useState('gym')
   const [cloudSync, setCloudSync] = useState({ state: 'idle', time: null })
   const [restTimer, setRestTimer] = useState(null)
   const hydratedRef = useRef(false)
@@ -55,10 +56,15 @@ export default function App() {
     setHistory(data.history ?? [])
     setActiveWorkout(data.activeWorkout ?? null)
     setGender(data.gender ?? null)
+    setTrainingMode(data.trainingMode ?? 'gym')
     if (data.activeWorkout) setScreen('workout')
   }, [])
 
-  const programId = gender === 'female' ? 'lv-ppl-female' : 'lv-ppl'
+  const programId = trainingMode === 'home'
+    ? 'home-calisthenics'
+    : gender === 'female'
+      ? 'lv-ppl-female'
+      : 'lv-ppl'
 
   /* ── Auto-sync to Supabase ───────────────────────────── */
   const autoSync = useCallback(async (data) => {
@@ -75,7 +81,7 @@ export default function App() {
 
   useEffect(() => {
     if (gender === null) return
-    saveData({ history, activeWorkout, gender })
+    saveData({ history, activeWorkout, gender, trainingMode })
 
     if (!hydratedRef.current) {
       hydratedRef.current = true
@@ -83,10 +89,10 @@ export default function App() {
     }
 
     const id = setTimeout(() => {
-      autoSync({ history, activeWorkout, gender })
+      autoSync({ history, activeWorkout, gender, trainingMode })
     }, 1200)
     return () => clearTimeout(id)
-  }, [history, activeWorkout, gender, autoSync])
+  }, [history, activeWorkout, gender, trainingMode, autoSync])
 
   useEffect(() => {
     if (!restTimer) return
@@ -119,7 +125,12 @@ export default function App() {
 
   function handleGenderSelect(g) {
     setGender(g)
-    saveData({ history, activeWorkout, gender: g })
+    saveData({ history, activeWorkout, gender: g, trainingMode })
+  }
+
+  function handleTrainingModeChange(mode) {
+    setTrainingMode(mode)
+    saveData({ history, activeWorkout, gender, trainingMode: mode })
   }
 
   function startWorkout(day) {
@@ -168,13 +179,14 @@ export default function App() {
     if (loaded.history) setHistory(loaded.history)
     if (loaded.activeWorkout !== undefined) setActiveWorkout(loaded.activeWorkout)
     if (loaded.gender) setGender(loaded.gender)
+    if (loaded.trainingMode) setTrainingMode(loaded.trainingMode)
   }
 
   if (gender === null) {
     return <GenderSelectScreen onSelect={handleGenderSelect} />
   }
 
-  const cloudData = { history, activeWorkout, gender }
+  const cloudData = { history, activeWorkout, gender, trainingMode }
 
   function renderScreen() {
     switch (screen) {
@@ -184,6 +196,7 @@ export default function App() {
             history={history}
             activeWorkout={activeWorkout}
             programId={programId}
+            trainingMode={trainingMode}
             onStartWorkout={startWorkout}
             setScreen={navigate}
             driveSync={
@@ -212,7 +225,9 @@ export default function App() {
           <ProgramsScreen
             programId={programId}
             gender={gender}
+            trainingMode={trainingMode}
             onStartWorkout={startWorkout}
+            onChangeTrainingMode={handleTrainingModeChange}
             onChangeGender={() => setGender(null)}
           />
         )

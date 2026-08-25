@@ -9,12 +9,34 @@ const GENDER_LABELS = {
   female: { icon: '♀', label: 'Feminino',  color: '#c084fc' },
 }
 
-export default function ProgramsScreen({ programId, gender, onStartWorkout, onChangeGender }) {
+function getWeekLabel(day, gender) {
+  if (day.id === 'push' || day.id === 'home-push') return 'P'
+  if (day.id === 'pull') return 'Pu'
+  if (day.id === 'legs') return gender === 'female' ? 'G' : 'L'
+  if (day.id === 'home-pull') return 'Bar'
+  if (day.id === 'home-legs') return 'Per'
+  if (day.id === 'home-core') return 'Core'
+  if (day.id === 'home-full') return 'Full'
+  return day.name.slice(0, 4)
+}
+
+export default function ProgramsScreen({
+  programId,
+  gender,
+  trainingMode,
+  onStartWorkout,
+  onChangeTrainingMode,
+  onChangeGender,
+}) {
   const program = PROGRAMS[programId] ?? PROGRAMS['lv-ppl']
   const [previewDay, setPreviewDay] = useState(null)
   const genderInfo = GENDER_LABELS[gender] ?? GENDER_LABELS.male
-  const legsLabel = gender === 'female' ? 'G' : 'L'
-  const weeklyPlan = ['P', 'Pu', legsLabel, 'P', 'Pu', '–', '–']
+  const weeklyPlan = [
+    ...Array.from({ length: 5 }, (_, i) => getWeekLabel(program.days[i % program.days.length], gender)),
+    '–',
+    '–',
+  ]
+  const isHomeProgram = trainingMode === 'home'
 
   return (
     <div className="screen animate-in">
@@ -44,15 +66,42 @@ export default function ProgramsScreen({ programId, gender, onStartWorkout, onCh
 
       <div className="card mt-8" style={{ background: 'var(--grad-glow)', borderColor: 'rgba(255,122,26,.2)' }}>
         <div className="row gap-12">
-          <span style={{ fontSize: 28 }}>🔬</span>
+          <span style={{ fontSize: 28 }}>{isHomeProgram ? '🏠' : '🔬'}</span>
           <div>
-            <p style={{ fontSize: 14, fontWeight: 700 }}>Foco Massa + Queima</p>
+            <p style={{ fontSize: 14, fontWeight: 700 }}>
+              {isHomeProgram ? 'Casa: Barra + Calistenia' : 'Foco Massa + Queima'}
+            </p>
             <p className="caption mt-8">
-              {gender === 'female'
+              {isHomeProgram
+                ? 'Costas na barra fixa, empurrar, pernas e core com peso corporal para manter hipertrofia e gasto calórico sem academia.'
+                : gender === 'female'
                 ? 'Glúteos e membros superiores com reps moderadas, descanso curto e volume suficiente para definição.'
                 : 'Reps de hipertrofia, descanso controlado e volume semanal para ganhar massa sem perder densidade.'}
             </p>
           </div>
+        </div>
+      </div>
+
+      <div className="card mt-12">
+        <p className="label mb-8">Módulo de treino</p>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+          {[
+            { id: 'gym', label: 'Academia', icon: '🏋️' },
+            { id: 'home', label: 'Casa', icon: '🏠' },
+          ].map(mode => {
+            const active = trainingMode === mode.id
+            return (
+              <button
+                key={mode.id}
+                type="button"
+                className={`btn ${active ? 'btn-primary' : 'btn-ghost'}`}
+                style={{ fontSize: 13 }}
+                onClick={() => onChangeTrainingMode(mode.id)}
+              >
+                {mode.icon} {mode.label}
+              </button>
+            )
+          })}
         </div>
       </div>
 
@@ -97,7 +146,7 @@ export default function ProgramsScreen({ programId, gender, onStartWorkout, onCh
           })}
         </div>
         <p className="caption mt-12" style={{ opacity: .5 }}>
-          Seg–Sex = ciclo P / Pu / {legsLabel} · fim de semana = descanso
+          Seg–Sex = {weeklyPlan.slice(0, 5).join(' / ')} · fim de semana = descanso
         </p>
       </div>
 
